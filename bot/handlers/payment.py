@@ -13,7 +13,7 @@ from handlers.buildscript import generate_script, calc_expiredate, LIFETIME_HOUR
 
 async def send_invoice_handler(query: CallbackQuery, hours: int):
     database = Database()
-    price = await database.get_hours_price(query.message.from_user.id, hours)
+    price = await database.get_hours_price(query.message.chat.id, hours)
 
     title = "Доступ навсегда"
     if hours < LIFETIME_HOURS:
@@ -36,7 +36,7 @@ async def pre_checkout_handler(query: PreCheckoutQuery):
 
 async def success_payment_script(message: Message, bot: Bot, hours: int):
     database = Database()
-    telegramid = message.from_user.id
+    telegramid = message.chat.id
 
     price = await database.get_hours_price(telegramid, hours)
     hours += 1/6 # 10 minutes for setup
