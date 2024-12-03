@@ -63,7 +63,7 @@ def generate_script(telegramid: int = None, hours: float = None) -> str:
 
     # Setup worker script
     blob = f'''
-        const workerBlobURL = URL.createObjectURL(new Blob([atob(`{base64.b64encode(worker_script.encode()).decode()}`)], {{ type: 'application/javascript' }}));
+        let workerBlobURL = URL.createObjectURL(new Blob([atob(`{base64.b64encode(worker_script.encode()).decode()}`)], {{ type: 'application/javascript' }}));
     '''
     main_script = main_script.replace('const workerBlobURL = "WORKER_BLOB_URL_PLACEHOLDER";', blob.strip())
 
