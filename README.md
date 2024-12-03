@@ -1,4 +1,4 @@
-# MemHash Mining Speed Boost Telegram Bot
+# RainbowHash Telegram Bot (#MemHash booster)
 
 This project is a Telegram bot designed to facilitate the purchase of a script that boosts mining speed in the game **#MemHash**.
 
@@ -32,8 +32,10 @@ This project is a Telegram bot designed to facilitate the purchase of a script t
     `pip install -r requirements.txt`
 
 4. Set up environment variables:
-    **RAINBOWHASH_API_TOKEN**: Your bot API token
-    **RAINBOW_ALL_REFUND**: Whether to enable auto-refund (set to `true` for testing)
+   
+    `RAINBOWHASH_API_TOKEN`: Your bot API token
+   
+    `RAINBOWHASH_ALL_REFUND`: Whether to enable auto-refund (set to `true` for testing)
 
     Create a .env file in the project root or export these variables in your environment
 
@@ -42,7 +44,7 @@ This project is a Telegram bot designed to facilitate the purchase of a script t
     RAINBOWHASH_API_TOKEN=your_bot_token
     RAINBOWHASH_ALL_REFUND=true
     ```
-5. (Optional) Install the Javascript obfuscator for added security:
+6. (Optional) Install the Javascript obfuscator for added security:
 ```
 npm install javascript-obfuscator
 ```
