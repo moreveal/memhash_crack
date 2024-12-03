@@ -74,7 +74,7 @@ async def process_buy(callback_query: types.CallbackQuery):
             await callback_query.message.answer("😔 Вы уже пользовались тестовым периодом или оплачивали подписку")
             return
         
-        # TODO: выдать скрипт
+        await Payment.success_payment_script(callback_query.message, bot, hours)
     else:
         hours = 8
         if callback_query.data == "buy_lifetime":
