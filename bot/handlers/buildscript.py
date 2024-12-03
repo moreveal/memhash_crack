@@ -68,7 +68,7 @@ def generate_script(telegramid: int = None, hours: float = None) -> str:
     main_script = main_script.replace('const workerBlobURL = "WORKER_BLOB_URL_PLACEHOLDER";', blob.strip())
 
     # <Obfuscate>
-    for name in ['workers', 'workerBlobURL', 'checkTimeLeft', 'haveTime', 'timeLeftMs', 'startTimerUpdate',
+    for name in ['workers', 'workerBlobURL', 'checkTimeLeft', 'haveTime', 'timeLeftMs', 'startTimerUpdate', 'tstamp',
                 'sendEnergyToWorkers', 'onEnergyChange', 'energystate', 'hours', 'minutes', 'seconds', 'timerInterval']:
         main_script = main_script.replace(name, f'{random_varname(length=6)}')
 
