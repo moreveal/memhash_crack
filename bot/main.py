@@ -27,7 +27,7 @@ async def cmd_start(message: types.Message):
         content = f.read()
     
     await database.create_new_user(message.from_user.id)
-    await message.answer(content, parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True)
+    await message.answer(content, parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=False)
 
 @dp.message(Command("paysupport"))
 async def cmd_paysupport(message: types.Message):
