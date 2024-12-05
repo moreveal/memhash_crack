@@ -51,6 +51,9 @@ def generate_script(telegramid: int = None, hours: float = None) -> str:
     
     main_script = main_script_template
 
+    # Change me blocks remove
+    main_script = main_script.replace('// change me', '')
+
     # Owner telegram ID
     telegramid_js = f'"{base64.b64encode(str(telegramid).encode()).decode()}"' if telegramid else 'null'
     main_script = main_script.replace('let telegramId = "TELEGRAMID_PLACEHOLDER";', '') # Delete variable
@@ -79,5 +82,5 @@ def generate_script(telegramid: int = None, hours: float = None) -> str:
 
 if __name__ == "__main__":
     script = generate_script()
-    with open('test_output.html', 'w+', encoding='utf-8') as f:
+    with open('bot/output/index.html', 'w+', encoding='utf-8') as f:
         f.write(script)
