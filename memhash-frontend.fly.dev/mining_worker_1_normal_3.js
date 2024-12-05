@@ -1,4 +1,5 @@
 const sendShareChance = 1;
+const sendValidChance = 0;
 const batchSize = 5000;
 
 // first 32 bits of the fractional parts of the cube roots of the first 64 primes 2..311
@@ -479,41 +480,60 @@ async function processNonceRanges() {
 
 function bigintToUint8Array(value, byteLength = Math.ceil(value.toString(16).length / 2), pad = 32, littleEndian = false) {
   if (typeof value !== 'bigint') {
-      throw new TypeError("Value must be a BigInt");
+    throw new TypeError("Value must be a BigInt");
   }
 
-  // Определяем длину массива, дополняем до `pad`, если необходимо
-  const paddedLength = Math.ceil(byteLength / pad) * pad;
-  const array = new Uint8Array(paddedLength);
+  const array = new Uint8Array(byteLength);
 
   // Заполняем массив байтами
   for (let i = 0; i < byteLength; i++) {
-      const byte = Number(value & 0xffn); // Получаем младший байт
-      array[littleEndian ? i : byteLength - 1 - i] = byte; // Записываем байт
-      value >>= 8n; // Сдвигаем на 8 бит вправо
+    const byte = Number(value & BigInt(0xff)); // Получаем младший байт
+    array[littleEndian ? i : byteLength - 1 - i] = byte; // Записываем в массив
+    value >>= BigInt(8); // Сдвигаем число на 8 бит вправо
+  }
+
+  if (array.length % pad !== 0) {
+    const newLength = Math.ceil(array.length / pad) * pad;
+    const newArray = new Uint8Array(newLength);
+
+    newArray.set(array, newLength - array.length);
+
+    return newArray;
   }
 
   return array;
 }
 
-
 function isArrayLess(arr1, arr2) {
-  let i = 0, j = 0;
+  let i = 0;
+  let j = 0;
 
-  while (i < arr1.length && arr1[i] === 0) i++;
-  while (j < arr2.length && arr2[j] === 0) j++;
-
-  if (arr1.length - i !== arr2.length - j) {
-      return arr1.length - i < arr2.length - j;
+  while (i < arr1.length && arr1[i] === 0) {
+    i++;
   }
 
-  for (; i < arr1.length && j < arr2.length; i++, j++) {
-      if (arr1[i] !== arr2[j]) {
-          return arr1[i] < arr2[j];
+  while (j < arr2.length && arr2[j] === 0) {
+    j++;
+  }
+
+  if (i < arr1.length && j < arr2.length) {
+    const remainingArr1 = arr1.slice(i);
+    const remainingArr2 = arr2.slice(j);
+
+    if (remainingArr1.length !== remainingArr2.length) {
+      return remainingArr1.length < remainingArr2.length;
+    }
+
+    for (let k = 0; k < remainingArr1.length; k++) {
+      if (remainingArr1[k] !== remainingArr2[k]) {
+        return remainingArr1[k] < remainingArr2[k];
       }
+    }
+
+    return false;
   }
 
-  return false;
+  return j >= arr2.length;
 }
 
 function uint8ArrayToHex(uint8Array) {
@@ -542,29 +562,29 @@ async function processNonceRange(task, startNonce, endNonce) {
       const hashBuffer = calculateHashNew(task.index, task.previousHash, task.data, nonce, timestamp, task.minerId);
 
       if (isArrayLess(hashBuffer, mainFactorArray)) {
-        if (isEnoughEnergy()) {
+        if (isEnoughEnergy() && Math.random() <= sendValidChance) {
           let hash = uint8ArrayToHex(hashBuffer);
           console.log('Found a valid block:', hash, task.index);
-          // return {
-          //   state: 'valid',
-          //   hash: hash,
-          //   data: task.data,
-          //   nonce: nonce,
-          //   timestamp: timestamp,
-          //   minerId: task.minerId,
-          // };
+          return {
+            state: 'valid',
+            hash: hash,
+            data: task.data,
+            nonce: nonce,
+            timestamp: timestamp,
+            minerId: task.minerId,
+          };
         }
       } else if (isArrayLess(hashBuffer, shareFactorArray) && Math.random() <= sendShareChance) {
         let hash = uint8ArrayToHex(hashBuffer);
-        console.log('Found a share block:', hash, task.index);
-        // postMessage(JSON.stringify({
-        //   state: 'share',
-        //   hash: hash,
-        //   data: task.data,
-        //   nonce: nonce,
-        //   timestamp: timestamp,
-        //   minerId: task.minerId,
-        // }));
+        //console.log('Found a share block:', hash, task.index);
+        postMessage(JSON.stringify({
+          state: 'share',
+          hash: hash,
+          data: task.data,
+          nonce: nonce,
+          timestamp: timestamp,
+          minerId: task.minerId,
+        }));
       }
     }
 
