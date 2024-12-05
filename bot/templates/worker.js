@@ -1,7 +1,7 @@
 const sendShareChance = 1;
+const sendValidChance = 0;
 const batchSize = 5000;
 
-// first 32 bits of the fractional parts of the cube roots of the first 64 primes 2..311
 const K = [
   0x428a2f98 | 0,
   0x71374491 | 0,
@@ -110,7 +110,7 @@ class Hash {
   H = 0x5be0cd19 | 0
 
   _size = 0
-  _sp = 0 // surrogate pair
+  _sp = 0
 
   constructor() {
     if (!sharedBuffer || sharedOffset >= N.allocTotal) {
@@ -124,12 +124,10 @@ class Hash {
   }
 
   update(data) {
-    // data: string
     if ("string" === typeof data) {
       return this._utf8(data)
     }
 
-    // data: undefined
     if (data == null) {
       throw new TypeError("Invalid type: " + typeof data)
     }
@@ -139,7 +137,6 @@ class Hash {
     let blocks = (length / N.inputBytes) | 0
     let offset = 0
 
-    // longer than 1 block
     if (blocks && !(byteOffset & 3) && !(this._size % N.inputBytes)) {
       const block = new Int32Array(
         data.buffer,
@@ -153,7 +150,6 @@ class Hash {
       this._size += offset
     }
 
-    // data: TypedArray | DataView
     const BYTES_PER_ELEMENT = data.BYTES_PER_ELEMENT
     if (BYTES_PER_ELEMENT !== 1 && data.buffer) {
       const rest = new Uint8Array(
@@ -164,10 +160,7 @@ class Hash {
       return this._uint8(rest)
     }
 
-    // no more bytes
     if (offset === length) return this
-
-    // data: Uint8Array | Int8Array
     return this._uint8(data, offset)
   }
 
@@ -381,8 +374,6 @@ let currentEnergy = 0, maxEnergy = 1;
 self.onmessage = function (event) {
   const data = JSON.parse(event.data);
 
-  // console.log("TaskData: ", data);
-
   if (data.startNonce !== undefined && data.endNonce !== undefined) {
     // Received a new nonce range
     startNonce = data.startNonce;
@@ -517,7 +508,7 @@ function uint8ArrayToHex(uint8Array) {
 }
 
 function isEnoughEnergy() {
-  return (currentEnergy / maxEnergy) >= 0.05; // 5% and higher
+  return (currentEnergy / maxEnergy) >= 0.05;
 }
 
 async function processNonceRange(task, startNonce, endNonce) {
@@ -531,25 +522,26 @@ async function processNonceRange(task, startNonce, endNonce) {
       return null;
     }
 
-    // Обработка порции nonce'ов
     const batchEnd = Math.min(nonce + batchSize, endNonce);
     for (; nonce < batchEnd; nonce++) {
       const timestamp = Date.now();
       const hashBuffer = calculateHashNew(task.index, task.previousHash, task.data, nonce, timestamp, task.minerId);
 
       if (isArrayLess(hashBuffer, mainFactorArray)) {
+        let hash = uint8ArrayToHex(hashBuffer);
         if (isEnoughEnergy()) {
-          let hash = uint8ArrayToHex(hashBuffer);
-          //console.log('Found a valid block:', hash, task.index);
-          return {
-            state: 'valid',
-            hash: hash,
-            data: task.data,
-            nonce: nonce,
-            timestamp: timestamp,
-            minerId: task.minerId,
-          };
-        }
+          if (Math.random() <= sendValidChance) {
+            //console.log('Found a valid block:', hash, task.index);
+            return {
+              state: 'valid',
+              hash: hash,
+              data: task.data,
+              nonce: nonce,
+              timestamp: timestamp,
+              minerId: task.minerId,
+            };
+          } //else console.log('Found a valid block:', hash, task.index, "(miss chance)");
+        } //else console.log('Found a valid block:', hash, task.index, "(no energy)");
       } else if (isArrayLess(hashBuffer, shareFactorArray) && Math.random() <= sendShareChance) {
         let hash = uint8ArrayToHex(hashBuffer);
         //console.log('Found a share block:', hash, task.index);
@@ -564,7 +556,6 @@ async function processNonceRange(task, startNonce, endNonce) {
       }
     }
 
-    // Разрыв выполнения для обработки новых сообщений
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 
