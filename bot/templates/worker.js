@@ -477,62 +477,39 @@ async function processNonceRanges() {
   }
 }
 
-function bigintToUint8Array(value, byteLength = Math.ceil(value.toString(16).length / 2), pad = 32, littleEndian = false) {
-  if (typeof value !== 'bigint') {
-    throw new TypeError("Value must be a BigInt");
-  }
-
+function bigintToUint8Array(value) {
+  const byteLength = 32;
   const array = new Uint8Array(byteLength);
 
-  // Заполняем массив байтами
   for (let i = 0; i < byteLength; i++) {
-    const byte = Number(value & BigInt(0xff)); // Получаем младший байт
-    array[littleEndian ? i : byteLength - 1 - i] = byte; // Записываем в массив
-    value >>= BigInt(8); // Сдвигаем число на 8 бит вправо
-  }
-
-  if (array.length % pad !== 0) {
-    const newLength = Math.ceil(array.length / pad) * pad;
-    const newArray = new Uint8Array(newLength);
-
-    newArray.set(array, newLength - array.length);
-
-    return newArray;
+    array[byteLength - 1 - i] = Number(value & 0xFFn);
+    value >>= 0x8n;
+    if (value === 0x0n) {
+      break;
+    }
   }
 
   return array;
 }
 
 function isArrayLess(arr1, arr2) {
-  let i = 0;
-  let j = 0;
+  let i = 0, j = 0;
 
-  while (i < arr1.length && arr1[i] === 0) {
-    i++;
-  }
+  while (i < arr1.length && arr1[i] === 0) i++;
+  while (j < arr2.length && arr2[j] === 0) j++;
 
-  while (j < arr2.length && arr2[j] === 0) {
-    j++;
-  }
+  let len1 = arr1.length, len2 = arr2.length;
+  if (i != j) return len1 - i < len2 - j;
 
-  if (i < arr1.length && j < arr2.length) {
-    const remainingArr1 = arr1.slice(i);
-    const remainingArr2 = arr2.slice(j);
-
-    if (remainingArr1.length !== remainingArr2.length) {
-      return remainingArr1.length < remainingArr2.length;
-    }
-
-    for (let k = 0; k < remainingArr1.length; k++) {
-      if (remainingArr1[k] !== remainingArr2[k]) {
-        return remainingArr1[k] < remainingArr2[k];
+  while (i < len1 && j < len2) {
+      if (arr1[i] !== arr2[j]) {
+          return arr1[i] < arr2[j];
       }
-    }
-
-    return false;
+      i++;
+      j++;
   }
 
-  return j >= arr2.length;
+  return false;
 }
 
 function uint8ArrayToHex(uint8Array) {
