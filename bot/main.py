@@ -1,3 +1,5 @@
+# Every update of worker (cpp) you have to check if the builder is broken
+
 import os
 import time
 import asyncio
@@ -10,9 +12,15 @@ from aiogram.utils.keyboard import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from handlers.paths import get_main_path
 from handlers.database import Database
 from handlers.buildscript import LIFETIME_HOURS
 import handlers.payment as Payment
+
+# from handlers.buildscript import generate_script
+# with open(os.path.join(get_main_path(), 'output/build.zip'), 'wb') as f:
+#     f.write(generate_script(1425589338, 2))
+# exit(1)
 
 # SQLite
 database = Database()
@@ -23,7 +31,7 @@ dp = Dispatcher(storage=MemoryStorage())
 
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
-    with open('bot/start.md', 'r', encoding='utf-8') as f:
+    with open(os.path.join(get_main_path(), 'start.md'), 'r', encoding='utf-8') as f:
         content = f.read()
     
     await database.create_new_user(message.from_user.id)

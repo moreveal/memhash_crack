@@ -1,6 +1,4 @@
-import zipfile
 import os
-from io import BytesIO
 from datetime import datetime
 
 from aiogram import Bot
@@ -42,18 +40,10 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
     hours += 1/6 # 10 minutes for setup
 
     # Generate script and send it
-    script = generate_script(telegramid, hours).encode()
-    if script is None:
+    zip_file_content = generate_script(telegramid, hours)
+    if zip_file_content is None:
         await bot.send_message(message.chat.id, '❌ Произошла ошибка при попытке отправить файл.\n\nСвяжитесь с поддержкой (контакты указаны в приветственном сообщении)')
         return
-    
-    zip_buffer = BytesIO()
-    
-    with zipfile.ZipFile(zip_buffer, 'a', zipfile.ZIP_DEFLATED) as zip_file:
-        zip_file.writestr('rainbow-hash/memhash-frontend.fly.dev/index.html', script)
-    
-    zip_buffer.seek(0)
-    zip_file_content = zip_buffer.read()
     
     expire_date = calc_expiredate(hours)
     success_text = f'''

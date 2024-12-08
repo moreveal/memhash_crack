@@ -1,0 +1,13 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "memhash_worker.dir\\Release\\main.obj",
+            "outputs": [
+                "memhash_worker.dir\\Release\\"
+            ],
+            "requires": []
+        }
+    ]
+}

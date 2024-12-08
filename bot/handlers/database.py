@@ -1,6 +1,9 @@
+import os
 import aiosqlite
 
-database_path = 'bot/users.db'
+from handlers.paths import get_main_path
+
+database_path = os.path.join(get_main_path(), 'users.db')
 
 class Database:
     def __init__(self, path=database_path):
@@ -70,14 +73,12 @@ class Database:
                 if hours < 1:
                     return 0
                 if hours <= 8:
-                    return 750
+                    return 1000
                 if hours <= 24:
-                    return 2000
+                    return 1500
                 if hours <= 48:
-                    return 3500
+                    return 2500
                 if hours <= 96:
-                    return 6000
-                
-                return 45000
+                    return 5000
         
-        return 100000
+        return 50000
