@@ -7,26 +7,26 @@
 С ними можно ознакомиться ниже \(Intel Core I5\-13400F\):  
 ```
 x100 hashes:
-RainbowHash: 2.815ms
+RainbowHash: 0.938ms
 Default: 15.483ms
 
 x10.000 hashes:
-RainbowHash: 24.084ms
+RainbowHash: 2.531ms
 Default: 233.638ms
 
 x100.000 hashes:
-RainbowHash: 212.833ms
+RainbowHash: 12.389ms
 Default: 2173.334ms
 
 x1.000.000 hashes:
-RainbowHash: 1865.903ms
+RainbowHash: 117.903ms
 Default: 22741.663ms
 
 x5.000.000 hashes:
-RainbowHash: 9168.606ms
+RainbowHash: 382.859ms
 Default: 120731.298ms
 ```
-Таким образом, скорость добычи в среднем увеличена более чем в 8 раз
+Таким образом, скорость добычи в среднем увеличена более чем в 20 раз
 Вы можете убедиться в этом самостоятельно:
 \[Новым пользователям доступен тест на 30 минут\]
 
