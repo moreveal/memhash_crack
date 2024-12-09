@@ -88,7 +88,7 @@ async def process_buy(callback_query: types.CallbackQuery):
         else:
             hours = int(''.join(c if c.isdigit() else '' for c in callback_query.data))
         
-        await Payment.send_invoice_handler(callback_query, hours)
+        await Payment.send_invoice_handler(callback_query, bot, hours)
 
 @dp.callback_query(lambda callback: callback.data == "cancel")
 async def process_cancel(callback_query: types.CallbackQuery):

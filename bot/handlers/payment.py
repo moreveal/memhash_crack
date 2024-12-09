@@ -9,9 +9,13 @@ from keyboards.payment_keyboard import PaymentKeyboard
 
 from handlers.buildscript import generate_script, calc_expiredate, LIFETIME_HOURS
 
-async def send_invoice_handler(query: CallbackQuery, hours: int):
+async def send_invoice_handler(query: CallbackQuery, bot: Bot, hours: int):
     database = Database()
     price = await database.get_hours_price(query.message.chat.id, hours)
+
+    if price <= 0:
+        await success_payment_script(query.message, bot, hours)
+        return
 
     title = "Доступ навсегда"
     if hours < LIFETIME_HOURS:
