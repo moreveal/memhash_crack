@@ -1,5 +1,3 @@
-# Every update of worker (cpp) you have to check if the builder is broken
-
 import os
 import time
 import asyncio
