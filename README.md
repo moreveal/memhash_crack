@@ -44,21 +44,12 @@ This project is a Telegram bot designed to facilitate the purchase of a script t
     RAINBOWHASH_API_TOKEN=your_bot_token
     RAINBOWHASH_ALL_REFUND=true
     ```
-6. (Optional) Install the Javascript obfuscator for added security:
-```
-npm install javascript-obfuscator
-```
-*Note*: Obfuscation is currently disabled. See the `TODO` section below.
-
+    
 ## Running the bot
 Start the bot with:
 ```
 python main.py
 ```
-
-## TODO List:
-* Obfuscate Code: Add obfuscation during the build process.
-    * Uncomment the JavaScript obfuscator logic in the configuration when this feature is needed
 
 ## License
 This project is licensed under the MIT License.
