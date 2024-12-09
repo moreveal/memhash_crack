@@ -3,3 +3,8 @@ package-lock.json
 package.json
 **/*.pyc
 **/*.db
+bot/output/**
+**/*.sln
+**/*.vcxproj
+**/*.vcxproj.filters
+memhash_worker/*/

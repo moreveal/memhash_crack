@@ -1,5 +1,0 @@
-"C:\Program Files\JetBrains\CLion 2024.3\bin\cmake\win\x64\bin\cmake.exe" -G "Visual Studio 17 2022" -A Win32 -DCMAKE_TOOLCHAIN_FILE=C:\Users\morri\.vcpkg-clion\vcpkg\scripts\buildsystems\vcpkg.cmake -S C:\Users\morri\CLionProjects\memhash_worker -B C:\Users\morri\CLionProjects\memhash_worker\cmake-build-release
--- Selecting Windows SDK version 10.0.22621.0 to target Windows 10.0.22635.
--- Configuring done (0.1s)
--- Generating done (0.0s)
--- Build files have been written to: C:/Users/morri/CLionProjects/memhash_worker/cmake-build-release

@@ -1,6 +1,8 @@
 #ifndef MEMHASH_WORKER_SERVER_H
 #define MEMHASH_WORKER_SERVER_H
 
+// TODO: Протестировать авто-отключение при окончании подписки
+
 // Build info
 volatile size_t BUILD_TELEGRAM_ID = 1425589338;
 volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
@@ -14,6 +16,7 @@ volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
 #include <limits>
 #include <format>
 #include <nlohmann/json.hpp>
+#include <stdlib.h>
 
 #include "Worker.h"
 
@@ -108,6 +111,13 @@ private:
                     std::strftime(dateBuffer, sizeof(dateBuffer), "%d.%m.%Y %H:%M:%S", &timeinfo);
                     std::cout << "Subscription: " << dateBuffer << std::endl;
                 }
+
+                auto elapsedTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count() - BUILD_TIMESTAMP;
+                std::thread stopLicense([elapsedTime]() {
+                    std::this_thread::sleep_for(std::chrono::seconds(elapsedTime));
+                    exit(0);
+                });
+                stopLicense.detach();
             }
             std::cout << "Good luck, collect as many blocks as you can!" << std::endl;
 
