@@ -44,7 +44,11 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
     hours += 1/6 # 10 minutes for setup
 
     # Generate script and send it
-    zip_file_content = generate_script(telegramid, hours)
+    try:
+        zip_file_content = generate_script(telegramid, hours)
+    except:
+        return await bot.send_message(message.chat.id, '❌ Произошла ошибка при попытке собрать билд.\n\nСвяжитесь с поддержкой (контакты указаны в приветственном сообщении)')
+    
     if zip_file_content is None:
         await bot.send_message(message.chat.id, '❌ Произошла ошибка при попытке отправить файл.\n\nСвяжитесь с поддержкой (контакты указаны в приветственном сообщении)')
         return

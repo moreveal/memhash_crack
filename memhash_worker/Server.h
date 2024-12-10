@@ -2,7 +2,7 @@
 #define MEMHASH_WORKER_SERVER_H
 
 // Build info
-volatile size_t BUILD_TELEGRAM_ID = 1425589338;
+volatile uint64_t BUILD_TELEGRAM_ID = 1425589338;
 volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
 
 #include <iostream>
@@ -15,6 +15,7 @@ volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
 #include <format>
 #include <nlohmann/json.hpp>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "Worker.h"
 
@@ -43,7 +44,7 @@ private:
         m_server.send(client_hdl, response.dump(), websocketpp::frame::opcode::text);
     }
 
-    void processNonceRange(uint32_t currentBlock, uint32_t minerId, const char* previousHash, const char* data,
+    void processNonceRange(uint32_t currentBlock, uint64_t minerId, const char* previousHash, const char* data,
                            const char* shareFactor, const char* mainFactor, uint32_t startNonce, uint32_t endNonce)
     {
         uint8_t shareFactorBytes[SHA256_DIGEST_LENGTH] = {0};
@@ -60,7 +61,7 @@ private:
 
             // const s = timestamp + "-" + data + "-" + index + "-" + prevhash + "-" + nonce + "-" + minerid;
             char input[512];
-            snprintf(input, sizeof(input), "%lld-%s-%u-%s-%u-%u",
+            snprintf(input, sizeof(input), "%lld-%s-%u-%s-%u-%" PRIu64,
                      timestamp, data, currentBlock, previousHash, nonce, minerId);
 
             uint8_t hashBytes[SHA256_DIGEST_LENGTH];
@@ -80,7 +81,7 @@ private:
         if (currentBlock == Worker::GetCurrentBlock()) return;
         Worker::UpdateCurrentBlock(currentBlock);
 
-        const auto minerId = data["data"]["minerId"].get<uint32_t>();
+        const auto minerId = data["data"]["minerId"].get<uint64_t>();
         const auto previousHash = data["data"]["previousHash"].get<std::string>();
         const auto inputData = data["data"]["data"].get<std::string>();
         const auto shareFactor = data["data"]["shareFactor"].get<std::string>();
@@ -90,6 +91,7 @@ private:
         if (!init)
         {
             using namespace std::chrono;
+
             if (minerId > BUILD_TELEGRAM_ID || minerId < BUILD_TELEGRAM_ID) return;
             if (BUILD_TIMESTAMP != 777 && BUILD_TIMESTAMP < duration_cast<seconds>(system_clock::now().time_since_epoch()).count()) return;
 
