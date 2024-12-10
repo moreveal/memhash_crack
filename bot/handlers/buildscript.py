@@ -25,7 +25,7 @@ def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
         index_content = f.read()
 
     main_script_template = BeautifulSoup(index_content, 'html.parser').find_all('script')[6].text
-    with open(os.path.join(templates_folder, 'mining_worker_1_normal_3.js'), 'r', encoding='utf-8') as f:
+    with open(os.path.join(templates_folder, 'mining_worker_1_normal_5.js'), 'r', encoding='utf-8') as f:
         worker_script = f.read()
 
     main_script = main_script_template
@@ -75,7 +75,7 @@ def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
         # Browser
         web_path = 'override/memhash-frontend.fly.dev/'
         zip_file.writestr(os.path.join(web_path, 'index.html'), index_content.encode())
-        zip_file.writestr(os.path.join(web_path, 'mining_worker_1_normal_3.js'), worker_script.encode())
+        zip_file.writestr(os.path.join(web_path, 'mining_worker_1_normal_5.js'), worker_script.encode())
         with open(os.path.join(get_main_path(), 'templates/websocket_hook.js'), 'rb') as f:
             websocket_hook = f.read()
         zip_file.writestr(os.path.join(web_path, 'websocket_hook.js'), websocket_hook)

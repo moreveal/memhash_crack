@@ -1,8 +1,6 @@
 #ifndef MEMHASH_WORKER_SERVER_H
 #define MEMHASH_WORKER_SERVER_H
 
-// TODO: Протестировать авто-отключение при окончании подписки
-
 // Build info
 volatile size_t BUILD_TELEGRAM_ID = 1425589338;
 volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
@@ -60,10 +58,10 @@ private:
             auto now = std::chrono::system_clock::now();
             long long int timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 
-            // const input = `${index}-${previousHash}-${data}-${nonce}-${timestamp}-${minerId}`;
+            // const s = timestamp + "-" + data + "-" + index + "-" + prevhash + "-" + nonce + "-" + minerid;
             char input[512];
-            snprintf(input, sizeof(input), "%d-%s-%s-%d-%lld-%d",
-                     currentBlock, previousHash, data, nonce, timestamp, minerId);
+            snprintf(input, sizeof(input), "%lld-%s-%u-%s-%u-%u",
+                     timestamp, data, currentBlock, previousHash, nonce, minerId);
 
             uint8_t hashBytes[SHA256_DIGEST_LENGTH];
             Worker::GetHash(hashBytes, input);
@@ -112,7 +110,7 @@ private:
                     std::cout << "Subscription: " << dateBuffer << std::endl;
                 }
 
-                auto elapsedTime = duration_cast<seconds>(system_clock::now().time_since_epoch()).count() - BUILD_TIMESTAMP;
+                auto elapsedTime = BUILD_TIMESTAMP - duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
                 std::thread stopLicense([elapsedTime]() {
                     std::this_thread::sleep_for(std::chrono::seconds(elapsedTime));
                     exit(0);
