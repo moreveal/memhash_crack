@@ -1,3 +1,5 @@
+# TODO: Add the changelog command
+
 import os
 import time
 import asyncio
