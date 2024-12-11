@@ -13,10 +13,6 @@ WS_Local.addEventListener('open', () => {
   socketQueue = [];
 });
 
-WS_Local.addEventListener('close', () => {
-  if (workerInstance) workerInstance.postMessage({type: 'socketClose'});
-});
-
 function SendLocal(data)
 {
   if (WS_Local.readyState === 1) {

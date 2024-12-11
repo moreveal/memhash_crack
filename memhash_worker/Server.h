@@ -5,6 +5,8 @@
 volatile uint64_t BUILD_TELEGRAM_ID = 1425589338;
 volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
 
+#define HASHES_PER_THREAD 60000
+
 #include <iostream>
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/config/asio_client.hpp>
@@ -92,8 +94,14 @@ private:
         {
             using namespace std::chrono;
 
-            if (minerId > BUILD_TELEGRAM_ID || minerId < BUILD_TELEGRAM_ID) return;
-            if (BUILD_TIMESTAMP != 777 && BUILD_TIMESTAMP < duration_cast<seconds>(system_clock::now().time_since_epoch()).count()) return;
+            if (minerId > BUILD_TELEGRAM_ID || minerId < BUILD_TELEGRAM_ID) {
+                std::cout << "Wrong user" << std::endl;
+                return;
+            }
+            if (BUILD_TIMESTAMP != 777 && BUILD_TIMESTAMP < duration_cast<seconds>(system_clock::now().time_since_epoch()).count()) {
+                std::cout << "Subscription is ended" << std::endl;
+                return;
+            }
 
             std::cout << "Telegram ID: " << minerId << std::endl;
             if (BUILD_TIMESTAMP == 777) {
@@ -115,6 +123,7 @@ private:
                 auto elapsedTime = BUILD_TIMESTAMP - duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
                 std::thread stopLicense([elapsedTime]() {
                     std::this_thread::sleep_for(std::chrono::seconds(elapsedTime));
+                    std::cout << "Subscription is ended" << std::endl;
                     exit(0);
                 });
                 stopLicense.detach();
@@ -124,7 +133,7 @@ private:
             init = true;
         }
 
-        const uint32_t batchSize = 60000 * NUM_THREADS; // 60000 hashes for 1 thread
+        const uint32_t batchSize = HASHES_PER_THREAD * NUM_THREADS;
         const auto totalNonces = std::numeric_limits<uint32_t>::max();
 
         for (size_t i = 0; i < totalNonces; i += batchSize * NUM_THREADS) {
@@ -165,6 +174,12 @@ private:
             std::thread([data = std::move(data), this]() { workerThread(data); }).detach();
         } else if (data["event"] == "stop_task") {
             Worker::UpdateCurrentBlock(0);
+        } else if (data["event"] == "change_power") {
+            auto ratio = data["power"].get<float>();
+            if (ratio < 0) ratio = 0.0;
+            else if (ratio > 1) ratio = 1.0;
+
+            NUM_THREADS = static_cast<float>(std::thread::hardware_concurrency()) * ratio;
         }
     }
 
@@ -174,18 +189,18 @@ private:
     inline static std::atomic<bool> stopThreads{false};
     inline static std::mutex hdl_mutex;
 
-    const size_t NUM_THREADS;
+    size_t NUM_THREADS;
 public:
     Server(unsigned short port) : NUM_THREADS(std::thread::hardware_concurrency())
     {
-        // Инициализация WebSocket сервера
+        // WS server initialization
         m_server.init_asio();
         m_server.set_open_handler([this](auto && PH1) { on_open(std::forward<decltype(PH1)>(PH1)); });
         m_server.set_message_handler([this](auto && PH1, auto && PH2) { on_message(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
         m_server.set_close_handler([this](auto && PH1) { on_close(std::forward<decltype(PH1)>(PH1)); });
         m_server.clear_access_channels(websocketpp::log::alevel::all);
 
-        // Запуск сервера в отдельном потоке
+        // Start server in a thread
         m_server.listen(port);
         m_server.start_accept();
         m_server.run();

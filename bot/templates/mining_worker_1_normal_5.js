@@ -1,6 +1,7 @@
-// WORKER SETTINGS
-const SKIP_SHARE_RATIO = 0.0; // 0.0 - 1.0
-const SKIP_VALID_RATIO = 0.0; // 0.0 - 1.0
+// WORKER SETTINGS (0.0 - 1.0)
+const POWER_RATIO = 1.0; // CPU load
+const SKIP_SHARE_RATIO = 0.0; // Shares skip chance
+const SKIP_VALID_RATIO = 0.0; // Valid skip chance
 // ---------------
 
 let energy = {
@@ -13,10 +14,10 @@ function SendLocal(message)
   return postMessage({type: 'socketSend', message: message});
 }
 
-self.onmessage = function (event) {
-  if (event.data.type == 'socketClose') {
+SendLocal(JSON.stringify({event: 'change_power', power: POWER_RATIO}));
 
-  } else if (event.data.type == 'socketMessage') {
+self.onmessage = function (event) {
+  if (event.data.type == 'socketMessage') {
     // From socket
     let data = JSON.parse(event.data.message);
     if (data.state != null && data.hash != null)
