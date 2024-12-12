@@ -25,7 +25,7 @@ typedef websocketpp::server<websocketpp::config::asio> server;
 
 class Server {
 private:
-    void sendResult(const char* state, const uint8_t* hashBytes, const char* data, uint32_t nonce, long long int timestamp, uint32_t minerId)
+    void sendResult(const char* state, const uint8_t* hashBytes, const char* data, uint32_t nonce, long long int timestamp, uint64_t minerId)
     {
         auto hash = Worker::BytesToHex(hashBytes);
         auto client_hdl = [&] {
