@@ -30,7 +30,7 @@ self.onmessage = function (event) {
           //console.log(event.data.message);
         }
       } else {
-        if (energy.current / energy.max >= 0.05) {
+        if (energy.current / energy.max >= 0.1) {
           if (Math.random() >= SKIP_VALID_RATIO) {
             postMessage(event.data.message);
             console.log("Found a valid block:", data.hash);
