@@ -44,7 +44,7 @@ async def cmd_start(message: types.Message):
         try:
             referrer_candidate = int(referrer_candidate)
 
-            if user_id != referrer_candidate and await database.is_user_exists(referrer_candidate):
+            if not await database.is_user_exists(user_id) and await database.is_user_exists(referrer_candidate):
                 referrer = referrer_candidate
         except ValueError:
             pass
