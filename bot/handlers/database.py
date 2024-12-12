@@ -17,6 +17,7 @@ class Database:
                 "expire_date"	INTEGER NOT NULL DEFAULT 0,
                 "test"          INTEGER NOT NULL DEFAULT 0,
                 "donate"	    INTEGER DEFAULT 0
+                "tag"           TEXT DEFAULT '-'
             );
             """)
 

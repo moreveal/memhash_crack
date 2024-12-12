@@ -702,14 +702,6 @@
                         "timestamp": q,
                         "minerId": task.minerId
                     }));
-                    console.log(JSON.stringify({
-                        "state": "share",
-                        "hash": r,
-                        "data": task.data,
-                        "nonce": nonce,
-                        "timestamp": q,
-                        "minerId": task.minerId
-                    }));
                 }
             }
             nonce++;
