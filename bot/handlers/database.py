@@ -16,7 +16,7 @@ class Database:
                 "telegram_id"	INTEGER NOT NULL UNIQUE,
                 "expire_date"	INTEGER NOT NULL DEFAULT 0,
                 "test"          INTEGER NOT NULL DEFAULT 0,
-                "donate"	    INTEGER DEFAULT 0
+                "donate"	    INTEGER DEFAULT 0,
                 "tag"           TEXT DEFAULT '-'
             );
             """)
@@ -29,11 +29,32 @@ class Database:
             );          
             """)
 
+            await db.execute("""
+            CREATE TABLE IF NOT EXISTS "referrals" (
+                "user_id" INTEGER NOT NULL,
+                "friend_id" INTEGER NOT NULL UNIQUE,
+                "hours" INTEGER DEFAULT 0,
+                "referrer_used" INTEGER DEFAULT 0
+            );
+            """)
+
             await db.commit()
 
     async def create_new_user(self, telegramid: int):
         async with aiosqlite.connect(self.path) as db:
             await db.execute('INSERT OR IGNORE INTO users (telegram_id) VALUES (?)', (telegramid,))
+            await db.commit()
+
+    async def is_user_exists(self, telegramid: int):
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute("SELECT telegram_id FROM users WHERE telegram_id = ?", (telegramid,)) as cursor:
+                return len(await cursor.fetchall()) > 0
+        
+        return False
+    
+    async def create_referral(self, referrer: int, referral: int):
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute("INSERT OR IGNORE INTO referrals (user_id, friend_id) VALUES (?,?)", (referrer, referral))
             await db.commit()
 
     async def create_buy(self, telegramid: int, expire_date: int, hours: int = 0, price: int = 0):
@@ -44,6 +65,14 @@ class Database:
                     await db.execute("UPDATE users SET expire_date = ?, donate = donate + ? WHERE telegram_id = ?", (expire_date, price, telegramid))
 
             await db.execute("UPDATE users SET test = 1 WHERE telegram_id = ?", (telegramid,))
+
+            if hours > 0 and price > 0:
+                # Referral handle
+                await db.execute("UPDATE referrals SET hours = ? WHERE friend_id = ? AND hours = 0 AND referrer_used = 0", (hours, telegramid))
+
+                # Referrer handle
+                await db.execute("UPDATE referrals SET referrer_used = 1 WHERE user_id = ? AND hours = ? AND referrer_used = 0", (telegramid, hours))
+
             await db.execute("DELETE FROM unique_offers WHERE telegram_id = ? AND hours = ?", (telegramid, int(hours)))
             await db.commit()
 
@@ -66,20 +95,33 @@ class Database:
     async def get_hours_price(self, telegramid: int, hours):
         hours = int(hours)
 
+        price = 55000
         async with aiosqlite.connect(self.path) as db:
             async with db.execute("SELECT price FROM unique_offers WHERE telegram_id = ? AND hours = ?", (telegramid, hours)) as cursor:
                 async for row in cursor:
                     return int(row[0])
                 
                 if hours < 1:
-                    return 0
-                if hours <= 8:
-                    return 1000
-                if hours <= 24:
-                    return 1500
-                if hours <= 48:
-                    return 2500
-                if hours <= 96:
-                    return 5000
-        
-        return 50000
+                    price = 0
+                elif hours <= 8:
+                    price = 1500
+                elif hours <= 24:
+                    price = 2500
+                elif hours <= 48:
+                    price = 4000
+                elif hours <= 96:
+                    price = 6500
+            
+            # Discount for referrers
+            async with db.execute("SELECT friend_id FROM referrals WHERE user_id = ? AND hours = ? AND referrer_used = 0", (telegramid, hours)) as cursor:
+                referrals_buy_it = len(await cursor.fetchall())
+                discount = min(20 * referrals_buy_it, 100) # 20% discount for every referral (100% max)
+                if discount > 0:
+                    price *= (100 - discount) / 100
+
+            # Discount for referrals
+            async with db.execute("SELECT friend_id FROM referrals WHERE friend_id = ? AND hours = 0 AND referrer_used = 0", (telegramid,)) as cursor:
+                if len(await cursor.fetchall()) > 0:
+                    price *= 0.9 # 10% discount
+
+        return int(price)
