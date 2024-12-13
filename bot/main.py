@@ -23,7 +23,6 @@ import handlers.payment as Payment
 # SQLite
 database = Database()
 
-
 # Aiogram
 bot = Bot(token=os.environ['RAINBOWHASH_API_TOKEN'])
 dp = Dispatcher(storage=MemoryStorage())

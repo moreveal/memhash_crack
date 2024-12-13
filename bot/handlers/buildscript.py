@@ -30,9 +30,6 @@ def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
 
     main_script = main_script_template
 
-    # Changeme blocks remove
-    main_script = main_script.replace('// change me', '')
-
     # Patch windows executable
     with open(os.path.join(get_main_path(), 'templates/worker/windows/memhash_worker.exe'), 'r+b') as f:
         windows_worker = bytearray(f.read())
@@ -76,6 +73,9 @@ def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
     main_script = main_script.replace('\n\n', '\n')
 
     index_content = index_content.replace(main_script_template, main_script)
+    
+    # Changeme blocks remove
+    index_content = index_content.replace('// change me', '')
 
     zip_buffer = BytesIO()
     
