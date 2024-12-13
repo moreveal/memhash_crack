@@ -6,7 +6,7 @@ const SKIP_VALID_RATIO = 0.0; // Valid skip chance
 
 let energy = {
   current: 0,
-  max: 0
+  max: 1
 };
 
 function SendLocal(message)
