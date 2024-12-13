@@ -1,5 +1,6 @@
 import requests
 import re
+from bs4 import BeautifulSoup
 
 link = 'https://memhash-frontend.fly.dev/index.html'
 try:
@@ -38,9 +39,22 @@ content = re.sub(r'<div.+hashtag.+<\/div>', '<div class="hashtag"><p align="cent
 # placeholder for js
 content = re.sub(r'<script src=\"main.dart.js.+?</script>', '<script async>MAIN_SCRIPT_PLACEHOLDER</script>', content)
 
-link = 'https://memhash-frontend.fly.dev/main.dart.js?v=0.0.111'
+scripts = BeautifulSoup(html_content, 'html.parser').find_all('script', src=True)
 try:
-    response = requests.get(link)
+    for script in scripts:
+        if 'main.dart' in script['src']:
+            script_link = 'https://memhash-frontend.fly.dev/' + script['src'].strip()
+            break
+except Exception as e:
+    print(f"Script link error: {e}")
+    exit(0)
+finally:
+    if len(script_link) == 0:
+        print(f"Script link is not found")
+        exit(0)
+
+try:
+    response = requests.get(script_link)
     if response.status_code == 200:
         script_content = response.text
     else:
@@ -90,18 +104,18 @@ content = re.sub(r'((.)=.\..\..\(.\...\(.\..\(.,"energy"\){3}.+?(.)=..+?,"maxEne
                  content, flags=re.DOTALL)
 
 # energy decrease disable
-pattern = r',\"balance\"\){3}[^+]+\..{2}(\+.)\)[^\n]+(\n)'
+content = re.sub(r',\"balance\"\){3}[^+]+\..{2}(\+.)\)[^\n]+(\n)',
+                 lambda match: match.group(0).replace(match.group(1), f"/*{match.group(1)}*/").strip() + "// change me" + match.group(2),
+                 content)
 
-def comment_group(match):
-    group1 = match.group(1)
-    group2 = match.group(2)
-  
-    return match.group(0).replace(group1, f"/*{group1}*/").strip() + " // change me" + group2
-
-content = re.sub(pattern, comment_group, content)
+# energy counter
+content = re.sub(r'(Math\.min\(100+.+?,"balance"\){3}.+?(.)=.+?"energy"\){3}.+?.\.\w+?\(0\))}', r'\1\nonEnergyChange(energystate.current + \2); // change me\n}', content, flags=re.DOTALL)
 
 # ignore uint8list error:
 content = re.sub(r'(.\...\(\"Error parsing Uint8List message.+?\){2})', r'// \1 // change me\n', content)
+
+# ignore inserts/removes message:
+content = re.sub(r'(.\..{2}\(.+?" removes"\))', r'// \1 // change me', content)
 
 # 200 shares limit bypass:
 content = re.sub(r'(if\(.>=.\..&&.\)return)', r'// \1 // change me', content)
@@ -116,3 +130,5 @@ content = re.sub(r'((.)\.data,.+?if.+requestRange.+?}.+?}.+?else)', r'\1 if(type
 
 with open('extra/index.html', 'w+', encoding='utf-8') as f:
     f.write(content)
+
+print("Success patch:", script_link)

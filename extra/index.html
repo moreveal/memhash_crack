@@ -69416,11 +69416,13 @@ this.bi(0)},
 a_2(a){var s,r=this,q=J.ag(a),p=B.c.I(A.aW(q.h(a,"balance")))
 q=B.c.I(A.aW(q.h(a,"energy")))
 s=r.ch
-p=A.axQ(A.axS(s,s.db/*+q*/),s.dy+p) // change me
+p=A.axQ(A.axS(s,s.db/*+q*/),s.dy+p)// change me
 r.ch=p
 s=r.CW
 r.CW=A.pE(s.ch,s.CW,p)
-r.bi(0)},
+r.bi(0)
+onEnergyChange(energystate.current + q); // change me
+},
 Ht(a,b){var s,r,q=this,p=null,o=q.ch,n=A.axQ(A.axS(o,a.ch),a.cy)
 n=A.mp(n.dy,a.db,n.go,n.db,n.fy,n.ch,n.ay,n.cy,n.id,n.CW,n.dx,n.fx,p,n.k1,n.cx)
 n=A.mp(n.dy,n.fr,n.go,n.db,n.fy,n.ch,n.ay,n.cy,n.id,n.CW,a.CW,n.fx,p,n.k1,n.cx)
@@ -70635,7 +70637,7 @@ p=A.ac(c).i("aJ<1>")
 o=A.a5(new A.aJ(c,new A.akn(r),p),!0,p.i("m.E"))
 p=q.length
 n=o.length
-A.b4(""+p+" inserts, "+n+" removes")
+//A.b4(""+p+" inserts, "+n+" removes") // change me
 for(p=d.f,m=0;m<n;++m){l=o[m]
 k=B.b.Pb(c,new A.ako(l))
 if(k!==-1){j=p.gbe()
