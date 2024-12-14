@@ -20,7 +20,11 @@ def calc_expiredate(hours):
     
     return int(time.time() + hours * 3600)
 
-def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
+def generate_build(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> bytes:
+    '''
+    Generates a build instance for a specific user
+    '''
+    
     with open(os.path.join(templates_folder, 'override/index.html'), 'r', encoding='utf-8') as f:
         index_content = f.read()
 
@@ -101,3 +105,46 @@ def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
     zip_file_content = zip_buffer.read()
 
     return zip_file_content
+
+def generate_builds(accounts: list[int], hours: float = LIFETIME_HOURS) -> list[bytes]:
+    '''
+    Creates multiple instances of a build for different accounts,
+    distributing the total subscription time among them equally
+    '''
+
+    account_hours = hours / len(accounts) if hours != LIFETIME_HOURS else LIFETIME_HOURS
+    for idx, telegramid in enumerate(accounts):
+        build = generate_build(telegramid, account_hours + idx * account_hours)
+
+        bulk_folder = os.path.join(get_main_path(), 'output/bulk')
+        with open(os.path.join(bulk_folder, f'rainbow_hash_{telegramid}.zip'), 'wb') as f:
+            f.write(build)
+
+        _, timestamp = get_build_info(build)
+        print("Telegram ID:", telegramid, "Timestamp:", timestamp)
+
+def get_build_info(content: bytes) -> tuple:
+    '''
+    Gets the user data of an already generated build
+    '''
+
+    zip_file = BytesIO(content)
+
+    try:
+        with zipfile.ZipFile(zip_file) as zf:
+            with zf.open('worker/linux/memhash_worker', 'r') as f:
+                linux_worker = bytearray(f.read())
+            
+            # Change timestamp
+            address = 0x004FD010
+            if address != -1:
+                timestamp = int.from_bytes(linux_worker[address:address + 4], 'little')
+
+                address += 0x8
+                telegram_id = int.from_bytes(linux_worker[address:address + 8], 'little')
+                return (telegram_id, timestamp)
+            else:
+                raise Exception("Address is not found")
+    except Exception as e:
+        print("Get build info exception:", e)
+        return None

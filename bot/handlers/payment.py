@@ -7,7 +7,7 @@ from aiogram.types import LabeledPrice, Message, PreCheckoutQuery, CallbackQuery
 from handlers.database import Database
 from keyboards.payment_keyboard import PaymentKeyboard
 
-from handlers.buildscript import generate_script, calc_expiredate, LIFETIME_HOURS
+from handlers.buildscript import generate_build, calc_expiredate, LIFETIME_HOURS
 
 async def send_invoice_handler(query: CallbackQuery, bot: Bot, hours: int):
     database = Database()
@@ -45,7 +45,7 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
 
     # Generate script and send it
     try:
-        zip_file_content = generate_script(telegramid, hours)
+        zip_file_content = generate_build(telegramid, hours)
     except:
         return await bot.send_message(message.chat.id, '❌ Произошла ошибка при попытке собрать билд.\n\nСвяжитесь с поддержкой (контакты указаны в приветственном сообщении)')
     

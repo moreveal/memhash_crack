@@ -15,9 +15,13 @@ from handlers.database import Database
 from handlers.buildscript import LIFETIME_HOURS
 import handlers.payment as Payment
 
-# from handlers.buildscript import generate_script
+# from handlers.buildscript import generate_build
 # with open(os.path.join(get_main_path(), 'output/build.zip'), 'wb') as f:
-#     f.write(generate_script(6384965964))
+#     f.write(generate_build(6384965964))
+# exit(1)
+
+# from handlers.buildscript import generate_builds
+# generate_builds([123456789, 987654321], 24)
 # exit(1)
 
 # SQLite
