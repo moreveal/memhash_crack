@@ -17,7 +17,7 @@ import handlers.payment as Payment
 
 # from handlers.buildscript import generate_script
 # with open(os.path.join(get_main_path(), 'output/build.zip'), 'wb') as f:
-#     f.write(generate_script(1425589338))
+#     f.write(generate_script(6384965964))
 # exit(1)
 
 # SQLite

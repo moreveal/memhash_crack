@@ -21,17 +21,17 @@ def calc_expiredate(hours):
     return int(time.time() + hours * 3600)
 
 def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
-    with open(os.path.join(templates_folder, 'index.html'), 'r', encoding='utf-8') as f:
+    with open(os.path.join(templates_folder, 'override/index.html'), 'r', encoding='utf-8') as f:
         index_content = f.read()
 
     main_script_template = BeautifulSoup(index_content, 'html.parser').find_all('script')[6].text
-    with open(os.path.join(templates_folder, 'mining_worker_1_normal_5.js'), 'r', encoding='utf-8') as f:
+    with open(os.path.join(templates_folder, 'override/mining_worker_1_normal_5.js'), 'r', encoding='utf-8') as f:
         worker_script = f.read()
 
     main_script = main_script_template
 
     # Patch windows executable
-    with open(os.path.join(get_main_path(), 'templates/worker/windows/memhash_worker.exe'), 'r+b') as f:
+    with open(os.path.join(templates_folder, 'worker/windows/memhash_worker.exe'), 'r+b') as f:
         windows_worker = bytearray(f.read())
 
         # Change Telegram ID
@@ -51,7 +51,7 @@ def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
             raise Exception("Build error")
 
     # Patch linux executable
-    with open(os.path.join(get_main_path(), 'templates/worker/linux/memhash_worker'), 'r+b') as f:
+    with open(os.path.join(templates_folder, 'worker/linux/memhash_worker'), 'r+b') as f:
         linux_worker = bytearray(f.read())
 
         # Change timestamp
@@ -84,20 +84,18 @@ def generate_script(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> str:
         web_path = 'override/memhash-frontend.fly.dev/'
         zip_file.writestr(os.path.join(web_path, 'index.html'), index_content.encode())
         zip_file.writestr(os.path.join(web_path, 'mining_worker_1_normal_5.js'), worker_script.encode())
-        with open(os.path.join(get_main_path(), 'templates/websocket_hook.js'), 'rb') as f:
-            websocket_hook = f.read()
-        zip_file.writestr(os.path.join(web_path, 'websocket_hook.js'), websocket_hook)
+        zip_file.write(os.path.join(templates_folder, 'override/websocket_hook.js'), os.path.join(web_path, 'websocket_hook.js'))
 
         executable_path = 'worker/'
 
         # Windows
         zip_file.writestr(os.path.join(executable_path, 'windows/memhash_worker.exe'), windows_worker)
-        with open(os.path.join(get_main_path(), 'templates/worker/windows/libcrypto-3.dll'), 'rb') as f:
-            libcrypto_dll = f.read()
-        zip_file.writestr(os.path.join(executable_path, 'windows/libcrypto-3.dll'), libcrypto_dll)
+        zip_file.write(os.path.join(templates_folder, 'worker/windows/libcrypto-3.dll'), os.path.join(executable_path, 'windows/libcrypto-3.dll'))
+        zip_file.write(os.path.join(templates_folder, 'worker/windows/README.txt'), os.path.join(executable_path, 'windows/README.txt'))
 
         # Linux
         zip_file.writestr(os.path.join(executable_path, 'linux/memhash_worker'), linux_worker)
+        zip_file.write(os.path.join(templates_folder, 'worker/linux/README.txt'), os.path.join(executable_path, 'linux/README.txt'))
     
     zip_buffer.seek(0)
     zip_file_content = zip_buffer.read()
