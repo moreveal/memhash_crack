@@ -36,7 +36,7 @@ chmod +x ./memhash_worker (this command is entered only once, subsequent runs ar
 
 * Инструкция действительна для Ubuntu 22.04 (для других версий может немного отличаться, обратитесь в поддержку при возникновении проблем)
 
-1. Введите следующую консольную команду на вашем сервере: sudo apt update && sudo apt-get install xauth xorg openbox xrdp -y
+1. Введите следующую консольную команду на вашем сервере: sudo apt update && sudo apt install xauth xorg openbox xrdp xfce4 xfce4-goodies xfonts-base -y
 2. После завершения установки, откройте Remote Desktop Connection в Windows и укажите IP вашего сервера для подключения.
 3. Введите данные от вашей учетной записи Linux:
 user: root
