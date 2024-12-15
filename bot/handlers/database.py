@@ -136,7 +136,7 @@ class Database:
                 ({number, diglast} & {2, 3, 4}) and genetive_singular or nominative_plural
             )
 
-        return f"{hours} {numeral_noun_declension('час', 'часа', 'часов')}"
+        return f"{hours} {numeral_noun_declension(hours, 'час', 'часа', 'часов')}"
     
     async def set_user_hours(self, telegramid: int, hours: int):
         async with aiosqlite.connect(self.path) as db:

@@ -109,7 +109,7 @@ async def cmd_buy(message: types.Message):
         ]
     )
 
-    await message.answer(f"⏳ Ваш текущий баланс: <b>{await database.get_pretty_user_hours(message.from_user.id)} часов</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
+    await message.answer(f"⏳ Ваш текущий баланс: <b>{await database.get_pretty_user_hours(message.from_user.id)}</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
 
 @dp.message(Command("build"))
 async def process_build(message: types.Message):
