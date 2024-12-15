@@ -172,7 +172,7 @@ async def process_build(message: types.Message):
 
     # Generate the build
     try:
-        zip_file_content = generate_build(telegramid, hours + 1/6) # test for 10 minutes
+        zip_file_content = generate_build(target_telegramid, hours + 1/6) # test for 10 minutes
         if zip_file_content is None:
             raise Exception("Build error")
     except Exception as e:
