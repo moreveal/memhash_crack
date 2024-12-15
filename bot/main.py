@@ -125,12 +125,12 @@ async def process_build(message: types.Message):
         command_parts = message.text.split()
         if len(command_parts) != 3:
             if len(command_parts) == 2:
-                target_telegramid = telegramid
+                target_telegramid = int(telegramid)
                 hours = int(command_parts[1])
             else:
                 raise ValueError("Incorrect amount of arguments")
         else:
-            target_telegramid = command_parts[1]
+            target_telegramid = int(command_parts[1])
             hours = int(command_parts[2])
 
         if hours <= 0:
