@@ -106,23 +106,6 @@ def generate_build(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> bytes:
 
     return zip_file_content
 
-def generate_builds(accounts: list[int], hours: float = LIFETIME_HOURS) -> list[bytes]:
-    '''
-    Creates multiple instances of a build for different accounts,
-    distributing the total subscription time among them equally
-    '''
-
-    account_hours = hours / len(accounts) if hours != LIFETIME_HOURS else LIFETIME_HOURS
-    for idx, telegramid in enumerate(accounts):
-        build = generate_build(telegramid, account_hours + idx * account_hours)
-
-        bulk_folder = os.path.join(get_main_path(), 'output/bulk')
-        with open(os.path.join(bulk_folder, f'rainbow_hash_{telegramid}.zip'), 'wb') as f:
-            f.write(build)
-
-        _, timestamp = get_build_info(build)
-        print("Telegram ID:", telegramid, "Timestamp:", timestamp)
-
 def get_build_info(content: bytes) -> tuple:
     '''
     Gets the user data of an already generated build

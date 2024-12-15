@@ -1,4 +1,5 @@
 import os
+import time
 import aiosqlite
 
 from handlers.paths import get_main_path
@@ -14,10 +15,21 @@ class Database:
             await db.execute("""
             CREATE TABLE IF NOT EXISTS "users" (
                 "telegram_id"	INTEGER NOT NULL UNIQUE,
-                "expire_date"	INTEGER NOT NULL DEFAULT 0,
                 "test"          INTEGER NOT NULL DEFAULT 0,
-                "donate"	    INTEGER DEFAULT 0,
+                "donate"	    INTEGER NOT NULL DEFAULT 0,
+                "hours"         INTEGER NOT NULL DEFAULT 0,
                 "tag"           TEXT DEFAULT '-'
+            );
+            """)
+
+            await db.execute("""
+            CREATE TABLE IF NOT EXISTS "builds" (
+                "user_id"       INTEGER NOT NULL,
+                "telegram_id"   INTEGER NOT NULL,
+                "timestamp"     INTEGER NOT NULL,
+                "expire_date"   INTEGER NOT NULL,
+                             
+                UNIQUE(user_id, telegram_id, timestamp)
             );
             """)
 
@@ -57,12 +69,12 @@ class Database:
             await db.execute("INSERT OR IGNORE INTO referrals (user_id, friend_id) VALUES (?,?)", (referrer, referral))
             await db.commit()
 
-    async def create_buy(self, telegramid: int, expire_date: int, hours: int = 0, price: int = 0):
+    async def create_buy(self, telegramid: int, hours: int = 0, price: int = 0):
         async with aiosqlite.connect(self.path) as db:
-            async with db.execute("UPDATE users SET expire_date = ?, donate = donate + ? WHERE telegram_id = ?", (expire_date, price, telegramid)) as cursor:
+            async with db.execute("UPDATE users SET donate = donate + ? WHERE telegram_id = ?", (price, telegramid)) as cursor:
                 if cursor.rowcount < 1:
                     await db.execute('INSERT INTO users (telegram_id) VALUES (?)', (telegramid,))
-                    await db.execute("UPDATE users SET expire_date = ?, donate = donate + ? WHERE telegram_id = ?", (expire_date, price, telegramid))
+                    await db.execute("UPDATE users SET donate = donate + ? WHERE telegram_id = ?", (price, telegramid))
 
             await db.execute("UPDATE users SET test = 1 WHERE telegram_id = ?", (telegramid,))
 
@@ -76,6 +88,11 @@ class Database:
             await db.execute("DELETE FROM unique_offers WHERE telegram_id = ? AND hours = ?", (telegramid, int(hours)))
             await db.commit()
 
+    async def create_build(self, telegramid: int, target_telegramid: int, expire_date: int):
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute("INSERT INTO builds (user_id, telegram_id, timestamp, expire_date) VALUES (?, ?, ?, ?)", (telegramid, target_telegramid, int(time.time()), expire_date))
+            await db.commit()
+
     async def is_user_tested(self, telegramid: int):
         async with aiosqlite.connect(self.path) as db:
             async with db.execute("SELECT test FROM users WHERE telegram_id = ?", (telegramid,)) as cursor:
@@ -84,13 +101,27 @@ class Database:
             
         return False
 
-    async def get_user_expires(self, telegramid: int):
+    async def get_build_expires(self, userid: int, telegramid: int):
         async with aiosqlite.connect(self.path) as db:
-            async with db.execute("SELECT expire_date FROM users WHERE telegram_id = ?", (telegramid,)) as cursor:
-                async for row in cursor:
+            async with db.execute("SELECT expire_date FROM builds WHERE user_id = ? AND telegram_id = ? ORDER BY expire_date DESC LIMIT 1", (userid, telegramid)) as cursor:
+                row = await cursor.fetchone()
+                if row:
                     return int(row[0])
         
         return 0
+    
+    async def get_user_hours(self, telegramid: int):
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute("SELECT hours FROM users WHERE telegram_id = ?", (telegramid,)) as cursor:
+                async for row in cursor:
+                    return int(row[0])
+                
+        return 0
+    
+    async def set_user_hours(self, telegramid: int, hours: int):
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute("UPDATE users SET hours = ? WHERE telegram_id = ?", (hours, telegramid))
+            await db.commit()
 
     async def get_hours_price(self, telegramid: int, hours):
         hours = int(hours)

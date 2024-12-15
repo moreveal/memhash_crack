@@ -1,13 +1,13 @@
 import os
-from datetime import datetime
 
 from aiogram import Bot
-from aiogram.types import LabeledPrice, Message, PreCheckoutQuery, CallbackQuery, BufferedInputFile
+from aiogram.enums.parse_mode import ParseMode
+from aiogram.types import LabeledPrice, Message, PreCheckoutQuery, CallbackQuery
 
 from handlers.database import Database
 from keyboards.payment_keyboard import PaymentKeyboard
 
-from handlers.buildscript import generate_build, calc_expiredate, LIFETIME_HOURS
+from handlers.buildscript import LIFETIME_HOURS
 
 async def send_invoice_handler(query: CallbackQuery, bot: Bot, hours: int):
     database = Database()
@@ -19,19 +19,18 @@ async def send_invoice_handler(query: CallbackQuery, bot: Bot, hours: int):
 
     title = "Доступ навсегда"
     if hours < LIFETIME_HOURS:
-        title = f"Доступ на {hours} часов"
+        title = f"Время: {hours} часов"
 
     message = query.message
     await message.answer_invoice(
         title=title,
-        description="Позволяет пользоваться скриптом указанное количество времени",
+        description="Оплата времени",
         prices=[LabeledPrice(label='XTR', amount = price)],
         provider_token="",
         payload=f'buy_access_{hours}h',
         currency='XTR',
         reply_markup=PaymentKeyboard(price)
     )
-
 
 async def pre_checkout_handler(query: PreCheckoutQuery):
     await query.answer(ok=True)
@@ -40,28 +39,27 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
     database = Database()
     telegramid = message.chat.id
 
+    user_hours = await database.get_user_hours(telegramid) + hours
+    await database.set_user_hours(telegramid, user_hours)
+
+    success_text = f"""
+<b>🎉 Поздравляем! Оплата успешно прошла!</b>
+
+⏳ На ваш аккаунт добавлено <b>{hours} часов</b>.
+Теперь общее количество времени на вашем балансе: <b>{user_hours} часов</b>.
+
+📦 Вы можете использовать это время для генерации билда для ваших аккаунтов.
+Чтобы создать билд, выполните команду: 
+<code>/build telegramid hours</code>
+
+💡 <i>Совет:</i> Оптимизируйте своё время, распределяя часы между несколькими аккаунтами! 
+
+💙 <b>Приятного использования! Мы уверены, что вам понравится!</b>
+"""
+
     price = await database.get_hours_price(telegramid, hours)
-    hours += 1/6 # 10 minutes for setup
-
-    # Generate script and send it
-    try:
-        zip_file_content = generate_build(telegramid, hours)
-    except:
-        return await bot.send_message(message.chat.id, '❌ Произошла ошибка при попытке собрать билд.\n\nСвяжитесь с поддержкой (контакты указаны в приветственном сообщении)')
-    
-    if zip_file_content is None:
-        await bot.send_message(message.chat.id, '❌ Произошла ошибка при попытке отправить файл.\n\nСвяжитесь с поддержкой (контакты указаны в приветственном сообщении)')
-        return
-    
-    expire_date = calc_expiredate(hours)
-    success_text = f'''
-    🎉 Оплата прошла успешно
-
-Ваша подписка действительна до: {datetime.fromtimestamp(expire_date).strftime("%d.%m.%Y - %H:%M:%S")}
-💙 Удачного использования, вам обязательно понравится!
-    '''
-    await bot.send_document(message.chat.id, BufferedInputFile(zip_file_content, filename="rainbow_hash.zip"), caption=success_text.strip())
-    await database.create_buy(telegramid, expire_date, hours, price)
+    await database.create_buy(telegramid, hours, price)
+    await message.answer(success_text, parse_mode=ParseMode.HTML)
 
 async def success_payment_handler(message: Message, bot: Bot):
     if 'RAINBOWHASH_ALL_REFUND' in os.environ: # For tests
@@ -69,8 +67,6 @@ async def success_payment_handler(message: Message, bot: Bot):
             message.chat.id,
             message.successful_payment.telegram_payment_charge_id
         )
-
-    await message.answer("Заказ обрабатывается...")
 
     payload = message.successful_payment.invoice_payload
     if payload.startswith('buy_access'):

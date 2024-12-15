@@ -6,22 +6,19 @@ from datetime import datetime
 from aiogram import F
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart, Command
+from aiogram.types import BufferedInputFile
 from aiogram.utils.keyboard import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from handlers.paths import get_main_path
 from handlers.database import Database
-from handlers.buildscript import LIFETIME_HOURS
+from handlers.buildscript import generate_build, calc_expiredate, LIFETIME_HOURS
 import handlers.payment as Payment
 
 # from handlers.buildscript import generate_build
 # with open(os.path.join(get_main_path(), 'output/build.zip'), 'wb') as f:
 #     f.write(generate_build(6384965964))
-# exit(1)
-
-# from handlers.buildscript import generate_builds
-# generate_builds([123456789, 987654321], 24)
 # exit(1)
 
 # SQLite
@@ -104,7 +101,7 @@ async def cmd_buy(message: types.Message):
             ],
             [
                 InlineKeyboardButton(text=f"96 часов ({await database.get_hours_price(message.from_user.id, 96)} ⭐)", callback_data="buy_96h", pay=True),
-                InlineKeyboardButton(text=f"Бессрочно ({await database.get_hours_price(message.from_user.id, LIFETIME_HOURS)} ⭐)", callback_data="buy_lifetime", pay=True)
+                InlineKeyboardButton(text=f"Бесконечно ({await database.get_hours_price(message.from_user.id, LIFETIME_HOURS)} ⭐)", callback_data="buy_lifetime", pay=True)
             ],
             [
                 InlineKeyboardButton(text="Отмена", callback_data="cancel")
@@ -112,7 +109,101 @@ async def cmd_buy(message: types.Message):
         ]
     )
 
-    await message.answer("Выберите вариант подписки:", reply_markup=keyboard)
+    hours = await database.get_user_hours(message.from_user.id)
+    await message.answer(f"⏳ Ваш текущий баланс: <b>{hours} часов</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
+
+@dp.message(Command("build"))
+async def process_build(message: types.Message):
+    telegramid = message.from_user.id
+
+    # Extract the arguments
+    try:
+        command_parts = message.text.split()
+        if len(command_parts) != 3:
+            if len(command_parts) == 2:
+                target_telegramid = telegramid
+                hours = int(command_parts[1])
+            else:
+                raise ValueError("Incorrect amount of arguments")
+        else:
+            target_telegramid = command_parts[1]
+            hours = int(command_parts[2])
+
+        if hours <= 0:
+            raise ValueError("Incorrect amount of hours")
+    except ValueError:
+        await message.answer(
+            "❌ Неверный формат команды.\n\n"
+            "Используйте: <code>/build telegramid hours</code>\n"
+            "Пример: <code>/build 2718291002 5</code>\n\n"
+            "Вы также можете создать билд для текущего аккаунта:\n"
+            "Пример: <code>/build 5</code>\n\n"
+            "<b><a href=\"https://pikabu.ru/story/kak_uznat_identifikator_telegram_kanalachatagruppyi_kak_uznat_chat_id_telegram_bez_botov_i_koda_11099278\">* Как узнать Telegram ID?</a></b>",
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+        return
+    
+    user_hours = await database.get_user_hours(telegramid)
+    if user_hours < LIFETIME_HOURS and user_hours < hours:
+        await message.answer(
+            f"❌ Недостаточно часов на вашем балансе.\n\n"
+            f"Ваш баланс: <b>{user_hours} часов</b>\n"
+            f"Для команды вы запрашиваете: <b>{hours} часов</b>\n\n"
+            f"Пополните баланс, используя /buy",
+            parse_mode=ParseMode.HTML
+        )
+        return
+
+    expire_date = await database.get_build_expires(telegramid, target_telegramid)
+    if time.time() < expire_date:
+        await message.answer(f"🫡 На этом аккаунте уже есть активная подписка, дождитесь её завершения: {datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}")
+        return
+
+    remaining_hours = user_hours - hours
+    await database.set_user_hours(telegramid, remaining_hours)
+    
+    await message.answer(f"👾 Генерация билда [{target_telegramid} / Hours: {hours}]")
+
+    # Generate the build
+    try:
+        zip_file_content = generate_build(telegramid, hours + 1/6) # test for 10 minutes
+        if zip_file_content is None:
+            raise Exception("Build error")
+    except Exception as e:
+        await message.answer(
+            "❌ Произошла ошибка при попытке собрать билд.\n\n"
+            "Свяжитесь с поддержкой (контакты указаны в приветственном сообщении)",
+            parse_mode=ParseMode.HTML
+        )
+        return
+
+    expire_date = calc_expiredate(hours)
+    success_text = f"""
+<b>✅ Билд успешно создан!</b>
+
+📦 Для аккаунта: <b>{target_telegramid}</b>  
+⏳ Использовано: <b>{hours} часов</b>  
+📉 Оставшийся баланс: <b>{remaining_hours} часов</b>
+
+📅 Билд активен до: <b>{datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}</b>
+
+⚡ Ваш билд уже готов к использованию! 
+
+💡 <i>Совет:</i> Помните, что вы можете создавать дополнительные билды для других аккаунтов, используя команду:  
+<code>/build telegramid hours</code>
+
+💙 Спасибо, что выбрали наш сервис! Мы рады помочь вам!
+    """
+    
+    # Send the archive
+    await bot.send_document(
+        message.chat.id,
+        BufferedInputFile(zip_file_content, filename=f"rainbow_hash_{target_telegramid}.zip"),
+        caption=success_text.strip(),
+        parse_mode=ParseMode.HTML
+    )
+    await database.create_build(telegramid, target_telegramid, expire_date)
 
 @dp.callback_query(lambda callback: callback.data == "get_referral_link")
 async def process_get_referral_link(callback_query: types.CallbackQuery):
@@ -125,11 +216,6 @@ async def process_get_referral_link(callback_query: types.CallbackQuery):
 @dp.callback_query(lambda callback: callback.data.startswith("buy_"))
 async def process_buy(callback_query: types.CallbackQuery):
     telegramid = callback_query.from_user.id
-
-    expire_date = await database.get_user_expires(telegramid)
-    if time.time() < expire_date:
-        await callback_query.message.answer(f"🫡 У вас уже есть активная подписка, дождитесь её завершения: {datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}")
-        return
 
     if callback_query.data == "buy_test":
         hours = 0.5 # Test period
