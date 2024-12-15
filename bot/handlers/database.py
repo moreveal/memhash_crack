@@ -3,6 +3,7 @@ import time
 import aiosqlite
 
 from handlers.paths import get_main_path
+from handlers.buildscript import LIFETIME_HOURS
 
 database_path = os.path.join(get_main_path(), 'users.db')
 
@@ -117,6 +118,25 @@ class Database:
                     return int(row[0])
                 
         return 0
+    
+    async def get_pretty_user_hours(self, telegramid: int):
+        hours = await self.get_user_hours(telegramid)
+        if hours >= LIFETIME_HOURS:
+            return "♾️ Неограничено"
+        
+        def numeral_noun_declension(
+            number,
+            nominative_singular,
+            genetive_singular,
+            nominative_plural
+        ):
+            return (
+                (number in range(5, 20)) and nominative_plural or
+                (1 in (number, (diglast := number % 10))) and nominative_singular or
+                ({number, diglast} & {2, 3, 4}) and genetive_singular or nominative_plural
+            )
+
+        return f"{hours} {numeral_noun_declension('час', 'часа', 'часов')}"
     
     async def set_user_hours(self, telegramid: int, hours: int):
         async with aiosqlite.connect(self.path) as db:

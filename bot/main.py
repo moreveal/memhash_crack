@@ -109,8 +109,7 @@ async def cmd_buy(message: types.Message):
         ]
     )
 
-    hours = await database.get_user_hours(message.from_user.id)
-    await message.answer(f"⏳ Ваш текущий баланс: <b>{hours} часов</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
+    await message.answer(f"⏳ Ваш текущий баланс: <b>{await database.get_pretty_user_hours(message.from_user.id)} часов</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
 
 @dp.message(Command("build"))
 async def process_build(message: types.Message):
@@ -148,7 +147,7 @@ async def process_build(message: types.Message):
     if user_hours < LIFETIME_HOURS and user_hours < hours:
         await message.answer(
             f"❌ Недостаточно часов на вашем балансе.\n\n"
-            f"Ваш баланс: <b>{user_hours} часов</b>\n"
+            f"Ваш баланс: <b>{await database.get_pretty_user_hours(telegramid)}</b>\n"
             f"Для команды вы запрашиваете: <b>{hours} часов</b>\n\n"
             f"Пополните баланс, используя /buy",
             parse_mode=ParseMode.HTML
@@ -184,7 +183,7 @@ async def process_build(message: types.Message):
 
 📦 Для аккаунта: <b>{target_telegramid}</b>  
 ⏳ Использовано: <b>{hours} часов</b>  
-📉 Оставшийся баланс: <b>{remaining_hours} часов</b>
+📉 Оставшийся баланс: <b>{await database.get_pretty_user_hours(telegramid)}</b>
 
 📅 Билд активен до: <b>{datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}</b>
 
