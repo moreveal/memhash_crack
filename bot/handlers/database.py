@@ -3,7 +3,6 @@ import time
 import aiosqlite
 
 from handlers.paths import get_main_path
-from handlers.buildscript import LIFETIME_HOURS
 
 database_path = os.path.join(get_main_path(), 'users.db')
 
@@ -121,9 +120,7 @@ class Database:
     
     async def get_pretty_user_hours(self, telegramid: int):
         hours = await self.get_user_hours(telegramid)
-        if hours >= LIFETIME_HOURS:
-            return "♾️ Неограничено"
-        
+
         def numeral_noun_declension(
             number,
             nominative_singular,
@@ -146,7 +143,7 @@ class Database:
     async def get_hours_price(self, telegramid: int, hours):
         hours = int(hours)
 
-        price = 55000
+        price = 60000
         async with aiosqlite.connect(self.path) as db:
             async with db.execute("SELECT price FROM unique_offers WHERE telegram_id = ? AND hours = ?", (telegramid, hours)) as cursor:
                 async for row in cursor:
@@ -162,6 +159,8 @@ class Database:
                     price = 4000
                 elif hours <= 96:
                     price = 6500
+                elif hours <= 350:
+                    price = 17500
             
             # Discount for referrers
             async with db.execute("SELECT friend_id FROM referrals WHERE user_id = ? AND hours = ? AND referrer_used = 0", (telegramid, hours)) as cursor:

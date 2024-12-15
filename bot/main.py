@@ -13,7 +13,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from handlers.paths import get_main_path
 from handlers.database import Database
-from handlers.buildscript import generate_build, calc_expiredate, LIFETIME_HOURS
+from handlers.buildscript import generate_build, calc_expiredate
 import handlers.payment as Payment
 
 # from handlers.buildscript import generate_build
@@ -91,8 +91,6 @@ async def cmd_referral(message: types.Message):
 async def cmd_buy(message: types.Message):
     telegramid = message.from_user.id
     hours = await database.get_user_hours(telegramid)
-    if hours >= LIFETIME_HOURS:
-        return await message.answer('👾 Вы не можете купить себе дополнительное время, так как являетесь обладателем бессрочной подписки.')
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -106,7 +104,7 @@ async def cmd_buy(message: types.Message):
             ],
             [
                 InlineKeyboardButton(text=f"96 часов ({await database.get_hours_price(telegramid, 96)} ⭐)", callback_data="buy_96h", pay=True),
-                InlineKeyboardButton(text=f"Бесконечно ({await database.get_hours_price(telegramid, LIFETIME_HOURS)} ⭐)", callback_data="buy_lifetime", pay=True)
+                InlineKeyboardButton(text=f"350 часов ({await database.get_hours_price(telegramid, 350)} ⭐)", callback_data="buy_350h", pay=True)
             ],
             [
                 InlineKeyboardButton(text="Отмена", callback_data="cancel")
@@ -149,7 +147,7 @@ async def process_build(message: types.Message):
         return
     
     user_hours = await database.get_user_hours(telegramid)
-    if user_hours < LIFETIME_HOURS and user_hours < hours:
+    if user_hours < hours:
         await message.answer(
             f"❌ Недостаточно часов на вашем балансе.\n\n"
             f"Ваш баланс: <b>{await database.get_pretty_user_hours(telegramid)}</b>\n"
@@ -164,9 +162,8 @@ async def process_build(message: types.Message):
         await message.answer(f"🫡 На этом аккаунте уже есть активная подписка, дождитесь её завершения: {datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}")
         return
 
-    if user_hours < LIFETIME_HOURS:
-        remaining_hours = user_hours - hours
-        await database.set_user_hours(telegramid, remaining_hours)
+    remaining_hours = user_hours - hours
+    await database.set_user_hours(telegramid, remaining_hours)
     
     await message.answer(f"👾 Генерация билда [{target_telegramid} / Hours: {hours}]")
 
@@ -232,12 +229,7 @@ async def process_buy(callback_query: types.CallbackQuery):
         
         await Payment.success_payment_script(callback_query.message, bot, hours)
     else:
-        hours = 8
-        if callback_query.data == "buy_lifetime":
-            hours = LIFETIME_HOURS
-        else:
-            hours = int(''.join(c if c.isdigit() else '' for c in callback_query.data))
-        
+        hours = int(''.join(c if c.isdigit() else '' for c in callback_query.data))
         await Payment.send_invoice_handler(callback_query, bot, hours)
 
 @dp.callback_query(lambda callback: callback.data == "cancel")

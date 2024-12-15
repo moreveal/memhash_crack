@@ -7,20 +7,18 @@ from bs4 import BeautifulSoup
 
 from handlers.paths import get_main_path
 
-LIFETIME_HOURS = 10000
-
 templates_folder = os.path.join(get_main_path(), "templates")
 
 def random_varname(length=8):
     return ''.join(random.choices('abcdefghijklmnABCDEFGHIJKLMN', k=length))
 
 def calc_expiredate(hours):
-    if hours is None or hours >= LIFETIME_HOURS:
+    if hours is None:
         return 777
     
     return int(time.time() + hours * 3600)
 
-def generate_build(telegramid: int = 0, hours: float = LIFETIME_HOURS) -> bytes:
+def generate_build(telegramid: int = 0, hours: float = None) -> bytes:
     '''
     Generates a build instance for a specific user
     '''
