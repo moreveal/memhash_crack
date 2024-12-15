@@ -164,8 +164,9 @@ async def process_build(message: types.Message):
         await message.answer(f"🫡 На этом аккаунте уже есть активная подписка, дождитесь её завершения: {datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}")
         return
 
-    remaining_hours = user_hours - hours
-    await database.set_user_hours(telegramid, remaining_hours)
+    if user_hours < LIFETIME_HOURS:
+        remaining_hours = user_hours - hours
+        await database.set_user_hours(telegramid, remaining_hours)
     
     await message.answer(f"👾 Генерация билда [{target_telegramid} / Hours: {hours}]")
 

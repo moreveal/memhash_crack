@@ -2,9 +2,10 @@ import os
 
 from aiogram import Bot
 from aiogram.enums.parse_mode import ParseMode
-from aiogram.types import LabeledPrice, Message, PreCheckoutQuery, CallbackQuery
+from aiogram.types import LabeledPrice, Message, PreCheckoutQuery, CallbackQuery, BufferedInputFile
 
 from handlers.database import Database
+from handlers.buildscript import generate_build, calc_expiredate
 from keyboards.payment_keyboard import PaymentKeyboard
 
 from handlers.buildscript import LIFETIME_HOURS
@@ -39,8 +40,11 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
     database = Database()
     telegramid = message.chat.id
 
-    user_hours = await database.get_user_hours(telegramid) + hours
-    await database.set_user_hours(telegramid, user_hours)
+    is_test_period = hours < 1
+
+    if not is_test_period:    
+        user_hours = await database.get_user_hours(telegramid) + hours
+        await database.set_user_hours(telegramid, user_hours)
 
     success_text = f"""
 <b>🎉 Поздравляем! Оплата успешно прошла!</b>
@@ -56,6 +60,40 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
 
 💙 <b>Приятного использования! Мы уверены, что вам понравится!</b>
 """
+
+    if is_test_period:
+        hours += 1/6 # test for 10 minutes
+
+        expire_date = calc_expiredate(hours)
+        # Generate the build
+        try:
+            zip_file_content = generate_build(telegramid, hours)
+            if zip_file_content is None:
+                raise Exception("Build error")
+        except Exception as e:
+            await message.answer(
+                "❌ Произошла ошибка при попытке собрать билд.\n\n"
+                "Свяжитесь с поддержкой (контакты указаны в приветственном сообщении)",
+                parse_mode=ParseMode.HTML
+            )
+        
+        # Send the archive
+        await bot.send_document(
+            message.chat.id,
+            BufferedInputFile(zip_file_content, filename=f"rainbow_hash_{telegramid}.zip"),
+            caption=f"""
+<b>🎉 Поздравляем! Ваш тестовый билд готов!</b>
+
+💡 <i>Подсказка:</i> У вас есть 10 дополнительных минут на установку, в случае возникновения проблем - обратитесь в поддержку.
+
+💙 <b>Приятного использования! Мы уверены, что вам понравится!</b>
+            """,
+            parse_mode=ParseMode.HTML
+        )
+        await database.create_build(telegramid, telegramid, expire_date)
+        await database.create_buy(telegramid, hours, 0)
+
+        return
 
     price = await database.get_hours_price(telegramid, hours)
     await database.create_buy(telegramid, hours, price)
