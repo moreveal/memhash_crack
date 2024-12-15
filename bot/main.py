@@ -89,19 +89,24 @@ async def cmd_referral(message: types.Message):
 
 @dp.message(Command("buy"))
 async def cmd_buy(message: types.Message):
+    telegramid = message.from_user.id
+    hours = await database.get_user_hours(telegramid)
+    if hours >= LIFETIME_HOURS:
+        return await message.answer('👾 Вы не можете купить себе дополнительное время, так как являетесь обладателем бессрочной подписки.')
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(text="30 минут (0 ⭐)", callback_data="buy_test"),
-                InlineKeyboardButton(text=f"8 часов ({await database.get_hours_price(message.from_user.id, 8)} ⭐)", callback_data="buy_8h", pay=True)
+                InlineKeyboardButton(text=f"8 часов ({await database.get_hours_price(telegramid, 8)} ⭐)", callback_data="buy_8h", pay=True)
             ],
             [
-                InlineKeyboardButton(text=f"24 часа ({await database.get_hours_price(message.from_user.id, 24)} ⭐)", callback_data="buy_24h", pay=True),
-                InlineKeyboardButton(text=f"48 часов ({await database.get_hours_price(message.from_user.id, 48)} ⭐)", callback_data="buy_48h", pay=True)
+                InlineKeyboardButton(text=f"24 часа ({await database.get_hours_price(telegramid, 24)} ⭐)", callback_data="buy_24h", pay=True),
+                InlineKeyboardButton(text=f"48 часов ({await database.get_hours_price(telegramid, 48)} ⭐)", callback_data="buy_48h", pay=True)
             ],
             [
-                InlineKeyboardButton(text=f"96 часов ({await database.get_hours_price(message.from_user.id, 96)} ⭐)", callback_data="buy_96h", pay=True),
-                InlineKeyboardButton(text=f"Бесконечно ({await database.get_hours_price(message.from_user.id, LIFETIME_HOURS)} ⭐)", callback_data="buy_lifetime", pay=True)
+                InlineKeyboardButton(text=f"96 часов ({await database.get_hours_price(telegramid, 96)} ⭐)", callback_data="buy_96h", pay=True),
+                InlineKeyboardButton(text=f"Бесконечно ({await database.get_hours_price(telegramid, LIFETIME_HOURS)} ⭐)", callback_data="buy_lifetime", pay=True)
             ],
             [
                 InlineKeyboardButton(text="Отмена", callback_data="cancel")
@@ -109,7 +114,7 @@ async def cmd_buy(message: types.Message):
         ]
     )
 
-    await message.answer(f"⏳ Ваш текущий баланс: <b>{await database.get_pretty_user_hours(message.from_user.id)}</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
+    await message.answer(f"⏳ Ваш текущий баланс: <b>{await database.get_pretty_user_hours(telegramid)}</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
 
 @dp.message(Command("build"))
 async def process_build(message: types.Message):
