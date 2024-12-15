@@ -90,7 +90,6 @@ async def cmd_referral(message: types.Message):
 @dp.message(Command("buy"))
 async def cmd_buy(message: types.Message):
     telegramid = message.from_user.id
-    hours = await database.get_user_hours(telegramid)
 
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[

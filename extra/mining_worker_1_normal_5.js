@@ -418,12 +418,12 @@
             if (!f5) {
                 f5 = true;
                 if (fd === sha256(fa)) {
-                    fp();
+                    fp(); // supersonic
                 } else {
                     if (fd == sha256(fb)) {
-                        fo();
+                        fo(); // nitrocore
                     } else {
-                        fn();
+                        fn(); // turbo
                     }
                 }
             } else {
