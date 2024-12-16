@@ -10,12 +10,17 @@ from aiogram.types import BufferedInputFile
 from aiogram.utils.keyboard import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.enums.parse_mode import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
 from handlers.paths import get_main_path
 from handlers.database import Database
 from handlers.helpers import get_pretty_hours
 from handlers.buildscript import generate_build, calc_expiredate
+from handlers.mailing import MailingState
 import handlers.payment as Payment
+
+from filters.is_admin import AdminFilter
 
 # from handlers.buildscript import generate_build
 # with open(os.path.join(get_main_path(), 'output/build.zip'), 'wb') as f:
@@ -26,6 +31,7 @@ import handlers.payment as Payment
 database = Database()
 
 # Aiogram
+# bot = Bot('6818488855:AAHOEMVKUCZb2EpFoMsXY5NQwj1bzecZV4U') # Bot for tests only
 bot = Bot(token=os.environ['RAINBOWHASH_API_TOKEN'])
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -237,6 +243,38 @@ async def process_buy(callback_query: types.CallbackQuery):
 async def process_cancel(callback_query: types.CallbackQuery):
     await callback_query.answer("Покупка отменена.", show_alert=True)
     await callback_query.message.edit_text("Покупка отменена.")
+
+# Admin commands
+@dp.message(AdminFilter(), Command("mailing"))
+async def command_mailing(message: types.Message, state: FSMContext):
+    await state.set_state(MailingState.message)
+
+    cancel_button = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text='Отмена', callback_data='cancel_mailing')]]
+    )
+
+    await message.answer(
+        "Введите сообщение для рассылки ниже:",
+        reply_markup=cancel_button
+    )
+
+@dp.callback_query(lambda callback: callback.data == "cancel_mailing")
+async def cancel_mailing(callback_query: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+
+    await callback_query.message.edit_text('Вы успешно отменили рассылку!')
+
+@dp.message(MailingState.message)
+async def process_mailing(message: types.Message, state: FSMContext):
+    await state.update_data(message=message)
+    await state.clear()
+
+    await message.answer('Сообщение успешно отправлено всем участникам!')
+
+    users = await database.get_all_users()
+    for user in users:
+        await bot.copy_message(chat_id=user, from_chat_id=message.chat.id, message_id=message.message_id)
+# --------------
 
 # Entry point
 async def main():

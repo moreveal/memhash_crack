@@ -50,6 +50,12 @@ class Database:
             );
             """)
 
+            await db.execute("""
+            CREATE TABLE IF NOT EXISTS "admins" (
+                "telegram_id" INTEGER NOT NULL
+            );
+            """)
+
             await db.commit()
 
     async def create_new_user(self, telegramid: int):
@@ -63,6 +69,21 @@ class Database:
                 return len(await cursor.fetchall()) > 0
         
         return False
+    
+    async def is_user_admin(self, telegramid: int):
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute("SELECT telegram_id FROM admins WHERE telegram_id = ?", (telegramid,)) as cursor:
+                return len(await cursor.fetchall()) > 0
+        
+        return False
+    
+    async def get_all_users(self):
+        users = []
+        async with aiosqlite.connect(self.path) as db:
+            async with db.execute("SELECT telegram_id FROM users") as cursor:
+                async for row in cursor:
+                    users.append(int(row[0]))
+        return users
     
     async def create_referral(self, referrer: int, referral: int):
         async with aiosqlite.connect(self.path) as db:
