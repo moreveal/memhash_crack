@@ -118,23 +118,6 @@ class Database:
                 
         return 0
     
-    async def get_pretty_user_hours(self, telegramid: int):
-        hours = await self.get_user_hours(telegramid)
-
-        def numeral_noun_declension(
-            number,
-            nominative_singular,
-            genetive_singular,
-            nominative_plural
-        ):
-            return (
-                (number in range(5, 20)) and nominative_plural or
-                (1 in (number, (diglast := number % 10))) and nominative_singular or
-                ({number, diglast} & {2, 3, 4}) and genetive_singular or nominative_plural
-            )
-
-        return f"{hours} {numeral_noun_declension(hours, 'час', 'часа', 'часов')}"
-    
     async def set_user_hours(self, telegramid: int, hours: int):
         async with aiosqlite.connect(self.path) as db:
             await db.execute("UPDATE users SET hours = ? WHERE telegram_id = ?", (hours, telegramid))

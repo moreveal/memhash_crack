@@ -5,6 +5,7 @@ from aiogram.enums.parse_mode import ParseMode
 from aiogram.types import LabeledPrice, Message, PreCheckoutQuery, CallbackQuery, BufferedInputFile
 
 from handlers.database import Database
+from handlers.helpers import get_pretty_hours
 from handlers.buildscript import generate_build, calc_expiredate
 from keyboards.payment_keyboard import PaymentKeyboard
 
@@ -16,12 +17,12 @@ async def send_invoice_handler(query: CallbackQuery, bot: Bot, hours: int):
         await success_payment_script(query.message, bot, hours)
         return
 
-    title = f"Время: {hours} часов"
+    title = f"Время: {get_pretty_hours(hours)}"
 
     message = query.message
     await message.answer_invoice(
         title=title,
-        description="Оплата времени",
+        description="Покупка времени",
         prices=[LabeledPrice(label='XTR', amount = price)],
         provider_token="",
         payload=f'buy_access_{hours}h',
@@ -45,8 +46,8 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
     success_text = f"""
 <b>🎉 Поздравляем! Оплата успешно прошла!</b>
 
-⏳ На ваш аккаунт добавлено <b>{hours} часов</b>.
-Теперь общее количество времени на вашем балансе: <b>{await database.get_pretty_user_hours(telegramid)}</b>.
+⏳ На ваш аккаунт добавлено <b>{get_pretty_hours(hours)}</b>.
+Теперь общее количество времени на вашем балансе: <b>{get_pretty_hours(await database.get_user_hours(telegramid))}</b>.
 
 📦 Вы можете использовать это время для генерации билда для ваших аккаунтов.
 Чтобы создать билд, выполните команду: 

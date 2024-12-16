@@ -13,6 +13,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from handlers.paths import get_main_path
 from handlers.database import Database
+from handlers.helpers import get_pretty_hours
 from handlers.buildscript import generate_build, calc_expiredate
 import handlers.payment as Payment
 
@@ -111,7 +112,8 @@ async def cmd_buy(message: types.Message):
         ]
     )
 
-    await message.answer(f"⏳ Ваш текущий баланс: <b>{await database.get_pretty_user_hours(telegramid)}</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
+    hours = await database.get_user_hours(telegramid)
+    await message.answer(f"⏳ Ваш текущий баланс: <b>{get_pretty_hours(hours)}</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
 
 @dp.message(Command("build"))
 async def process_build(message: types.Message):
@@ -149,8 +151,8 @@ async def process_build(message: types.Message):
     if user_hours < hours:
         await message.answer(
             f"❌ Недостаточно часов на вашем балансе.\n\n"
-            f"Ваш баланс: <b>{await database.get_pretty_user_hours(telegramid)}</b>\n"
-            f"Для команды вы запрашиваете: <b>{hours} часов</b>\n\n"
+            f"Ваш баланс: <b>{get_pretty_hours(user_hours)}</b>\n"
+            f"Для команды вы запрашиваете: <b>{get_pretty_hours(hours)}</b>\n\n"
             f"Пополните баланс, используя /buy",
             parse_mode=ParseMode.HTML
         )
@@ -184,8 +186,8 @@ async def process_build(message: types.Message):
 <b>✅ Билд успешно создан!</b>
 
 📦 Для аккаунта: <b>{target_telegramid}</b>  
-⏳ Использовано: <b>{hours} часов</b>  
-📉 Оставшийся баланс: <b>{await database.get_pretty_user_hours(telegramid)}</b>
+⏳ Использовано: <b>{get_pretty_hours(hours)}</b>  
+📉 Оставшийся баланс: <b>{get_pretty_hours(remaining_hours)}</b>
 
 📅 Билд активен до: <b>{datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}</b>
 
