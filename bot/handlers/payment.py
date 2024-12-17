@@ -6,7 +6,7 @@ from aiogram.types import LabeledPrice, Message, PreCheckoutQuery, CallbackQuery
 
 from handlers.database import Database
 from handlers.helpers import get_pretty_hours
-from handlers.buildscript import generate_build, calc_expiredate
+from handlers.buildscript import generate_build, generate_key, calc_expiredate
 from keyboards.payment_keyboard import PaymentKeyboard
 
 async def send_invoice_handler(query: CallbackQuery, bot: Bot, hours: int):
@@ -49,24 +49,26 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
         expire_date = calc_expiredate(hours)
         # Generate the build
         try:
-            zip_file_content = generate_build(telegramid, hours)
-            if zip_file_content is None:
+            key_content = generate_key(message.from_user.full_name or str(message.from_user.id), telegramid, expire_date)
+            if key_content is None:
                 raise Exception("Build error")
         except Exception as e:
             await message.answer(
-                "❌ Произошла ошибка при попытке собрать билд.\n\n"
+                "❌ Произошла ошибка при попытке сгенерировать тестовый ключ.\n\n"
                 "Свяжитесь с поддержкой (контакты указаны в приветственном сообщении)",
                 parse_mode=ParseMode.HTML
             )
+            print("Test generate key error:", e)
         
         # Send the archive
         await bot.send_document(
             message.chat.id,
-            BufferedInputFile(zip_file_content, filename=f"rainbow_hash_{telegramid}.zip"),
+            BufferedInputFile(key_content, filename=f"{telegramid}.key"),
             caption=f"""
-<b>🎉 Поздравляем! Ваш тестовый билд готов!</b>
+<b>🎉 Поздравляем! Ваш тестовый ключ сгенерирован!</b>
 
-💡 <i>Подсказка:</i> У вас есть 10 дополнительных минут на установку, в случае возникновения проблем - обратитесь в поддержку.
+💡 <i>Подсказка:</i> Получите актуальный билд с помощью команды <code>/build</code> и поместите ключ рядом с файлом memhash_worker
+У вас есть 10 дополнительных минут на установку, в случае возникновения проблем - обратитесь в поддержку.
 
 💙 <b>Приятного использования! Мы уверены, что вам понравится!</b>
             """,
@@ -83,9 +85,9 @@ async def success_payment_script(message: Message, bot: Bot, hours: int):
 ⏳ На ваш аккаунт добавлено <b>{get_pretty_hours(hours)}</b>.
 Теперь общее количество времени на вашем балансе: <b>{get_pretty_hours(await database.get_user_hours(telegramid))}</b>.
 
-📦 Вы можете использовать это время для генерации билда для ваших аккаунтов.
-Чтобы создать билд, выполните команду: 
-<code>/build telegramid hours</code>
+📦 Вы можете использовать это время для генерации ключей для ваших аккаунтов.
+Чтобы создать ключ, выполните команду: 
+<code>/key telegramid hours</code>
 
 💡 <i>Совет:</i> Оптимизируйте своё время, распределяя часы между несколькими аккаунтами! 
 
