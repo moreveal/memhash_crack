@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from handlers.paths import get_main_path
 
 templates_folder = os.path.join(get_main_path(), "templates")
+vmp_keygen_path = os.path.join(get_main_path(), '../vmp-keygen.js')
 
 def random_varname(length=8):
     return ''.join(random.choices('abcdefghijklmnABCDEFGHIJKLMN', k=length))
@@ -18,9 +19,10 @@ def calc_expiredate(hours):
     
     return int(time.time() + hours * 3600)
 
-def generate_build(telegramid: int = 0, hours: float = None) -> bytes:
+def generate_build() -> bytes:
     '''
-    Generates a build instance for a specific user
+    Generates a default build instance
+    * Need the .key-file for running
     '''
     
     with open(os.path.join(templates_folder, 'override/index.html'), 'r', encoding='utf-8') as f:
@@ -31,41 +33,6 @@ def generate_build(telegramid: int = 0, hours: float = None) -> bytes:
         worker_script = f.read()
 
     main_script = main_script_template
-
-    # Patch windows executable
-    with open(os.path.join(templates_folder, 'worker/windows/memhash_worker.exe'), 'r+b') as f:
-        windows_worker = bytearray(f.read())
-
-        # Change Telegram ID
-        address = windows_worker.find(b'\x5a\xc4\xf8\x54\x00\x00\x00\x00')
-        if address != -1:
-            # Lower/higher for x32 architecture (telegramid is x64 value)
-            lower_telegramid = telegramid & 0xFFFFFFFF
-            higher_telegramid = (telegramid >> 32) & 0xFFFFFFFF
-            windows_worker[address:address + 4] = lower_telegramid.to_bytes(4, 'little')
-            address += 0x4
-            windows_worker[address:address + 4] = higher_telegramid.to_bytes(4, 'little')
-
-            # Change timestamp
-            address += 0x4
-            windows_worker[address:address+4] = calc_expiredate(hours).to_bytes(4, 'little')
-        else:
-            raise Exception("Build error")
-
-    # Patch linux executable
-    with open(os.path.join(templates_folder, 'worker/linux/memhash_worker'), 'r+b') as f:
-        linux_worker = bytearray(f.read())
-
-        # Change timestamp
-        address = linux_worker.find(b'\x09\x03\x00\x00\x00\x00\x00\x00')
-        if address != -1:
-            linux_worker[address:address+4] = calc_expiredate(hours).to_bytes(4, 'little')
-
-            # Change Telegram ID
-            address += 0x8
-            linux_worker[address:address+8] = telegramid.to_bytes(8, 'little')
-        else:
-            raise Exception("Build error")
 
     # <Obfuscate>
     for name in ['workers', 'workerBlobURL', 'checkTimeLeft', 'haveTime', 'timeLeftMs', 'startTimerUpdate', 'tstamp',
@@ -91,18 +58,29 @@ def generate_build(telegramid: int = 0, hours: float = None) -> bytes:
         executable_path = 'worker/'
 
         # Windows
-        zip_file.writestr(os.path.join(executable_path, 'windows/memhash_worker.exe'), windows_worker)
+        zip_file.write(os.path.join(templates_folder, 'worker/windows/memhash_worker.vmp.exe'), os.path.join(executable_path, 'windows/memhash_worker.exe'))
         zip_file.write(os.path.join(templates_folder, 'worker/windows/libcrypto-3.dll'), os.path.join(executable_path, 'windows/libcrypto-3.dll'))
         zip_file.write(os.path.join(templates_folder, 'worker/windows/README.txt'), os.path.join(executable_path, 'windows/README.txt'))
 
         # Linux
-        zip_file.writestr(os.path.join(executable_path, 'linux/memhash_worker'), linux_worker)
+        zip_file.write(os.path.join(templates_folder, 'worker/linux/memhash_worker_vmp'), os.path.join(executable_path, 'linux/memhash_worker'))
         zip_file.write(os.path.join(templates_folder, 'worker/linux/README.txt'), os.path.join(executable_path, 'linux/README.txt'))
     
     zip_buffer.seek(0)
     zip_file_content = zip_buffer.read()
 
     return zip_file_content
+
+def generate_key(username: str, telegramid: int, expiredate: int) -> bytes:
+    from handlers.vmp_keygen import VMP
+    vmp = VMP(vmp_keygen_path)
+
+    key_buffer = BytesIO()
+    key_buffer.write(vmp.generate_key(username, telegramid, expiredate).encode())
+    key_buffer.seek(0)
+
+    content = key_buffer.read()
+    return content
 
 def get_build_info(content: bytes) -> tuple:
     '''

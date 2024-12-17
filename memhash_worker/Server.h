@@ -1,11 +1,20 @@
 #ifndef MEMHASH_WORKER_SERVER_H
 #define MEMHASH_WORKER_SERVER_H
 
-// Build info
-volatile uint64_t BUILD_TELEGRAM_ID = 1425589338;
-volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
-
 #define HASHES_PER_THREAD 60000
+
+#define ENABLE_VMP
+#ifdef ENABLE_VMP
+    #define VMP_ULTRA VMProtectBeginUltra
+    #define VMP_VIRT VMProtectBeginVirtualization
+    #define VMP_MUTATION VMProtectBeginMutation
+    #define VMP_END VMProtectEnd
+#else
+    #define VMP_ULTRA(string)
+    #define VMP_VIRT(string)
+    #define VMP_MUTATION(string)
+    #define VMP_END
+#endif
 
 #include <iostream>
 #include <websocketpp/config/asio_no_tls.hpp>
@@ -18,6 +27,9 @@ volatile unsigned long int BUILD_TIMESTAMP = 777; // 777 - unlimited
 #include <nlohmann/json.hpp>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <fstream>
+#include <filesystem>
+#include "VMProtectSDK.h"
 
 #include "Worker.h"
 
@@ -25,6 +37,113 @@ typedef websocketpp::server<websocketpp::config::asio> server;
 
 class Server {
 private:
+    static bool workerInit(uint64_t minerId)
+    {
+        using namespace std::chrono;
+
+        if (VMProtectIsDebuggerPresent(true) || !VMProtectIsValidImageCRC()) return false;
+
+        // Open .key file and read the serial
+        std::string key(1024, '\0');
+        {
+            namespace fs = std::filesystem;
+
+            const auto dir = fs::current_path();
+            for (const auto& entry : fs::directory_iterator(dir))
+            {
+                if (entry.is_regular_file() && entry.path().extension() == ".key")
+                {
+                    std::ifstream file(entry.path(), std::ios::binary);
+                    if (file) {
+                        file.seekg(0, std::ios::end);
+                        std::streampos fileSize = file.tellg();
+                        file.seekg(0, std::ios::beg);
+
+                        file.read(&key[0], fileSize);
+
+                        file.close();
+                    } else {
+                        std::cerr << "Unable to open the .key file" << std::endl;
+                        return false;
+                    }
+                }
+            }
+        }
+        if (key.empty()) {
+            std::cerr << "Invalid license key or could not find .key file" << std::endl;
+            return false;
+        }
+
+        // Get license info
+        int key_res = VMProtectSetSerialNumber(key.c_str());
+        if (key_res) {
+            std::cerr << "Invalid license key" << std::endl;
+            return false;
+        }
+        VMProtectSerialNumberData licenseData = {0};
+        VMProtectGetSerialNumberData(&licenseData, sizeof(licenseData));
+
+        // Check minerid
+        {
+            uint64_t build_telegram_id;
+
+            for (size_t i = 0; i < 8; i++) {
+                build_telegram_id = (build_telegram_id << 8) | licenseData.bUserData[i];
+            }
+
+            if (build_telegram_id != minerId)
+            {
+                std::cerr << "Invalid user identifier" << std::endl;
+                return false;
+            }
+        }
+
+        // Check expires
+        uint64_t build_timestamp = 0;
+        {
+            for (size_t i = 8; i < 16; i++)
+            {
+                build_timestamp = (build_timestamp << 8) | licenseData.bUserData[i];
+            }
+
+            const auto current_timestamp = duration_cast<seconds>(high_resolution_clock::now().time_since_epoch()).count();
+            if (current_timestamp > build_timestamp)
+            {
+                std::cerr << "License key has expired" << std::endl;
+                return false;
+            }
+        }
+
+        std::cout << "Telegram ID: " << minerId << std::endl;
+        if (build_timestamp == 777) {
+            std::cout << "Subscription: Lifetime" << std::endl;
+        } else {
+            const auto timestamp = static_cast<std::time_t>(build_timestamp);
+            std::tm timeinfo{};
+
+#if defined(_MSC_VER)
+            if (localtime_s(&timeinfo, &timestamp) == 0) {
+#else
+                if (localtime_r(&timestamp, &timeinfo)) {
+#endif
+                char dateBuffer[100];
+                std::strftime(dateBuffer, sizeof(dateBuffer), "%d.%m.%Y %H:%M:%S", &timeinfo);
+                std::cout << "Subscription: " << dateBuffer << std::endl;
+            }
+
+            auto elapsedTime = build_timestamp - duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+            std::thread stopLicense([elapsedTime]() {
+                std::this_thread::sleep_for(std::chrono::seconds(elapsedTime));
+                std::cout << "Subscription is ended" << std::endl;
+                exit(0);
+            });
+            stopLicense.detach();
+        }
+        std::cout << "Good luck, collect as many blocks as you can!" << std::endl;
+
+        return true;
+    }
+
     void sendResult(const char* state, const uint8_t* hashBytes, const char* data, uint32_t nonce, long long int timestamp, uint64_t minerId)
     {
         auto hash = Worker::BytesToHex(hashBytes);
@@ -89,49 +208,14 @@ private:
         const auto shareFactor = data["data"]["shareFactor"].get<std::string>();
         const auto mainFactor = data["data"]["mainFactor"].get<std::string>();
 
+        VMP_ULTRA("CheckLicense");
         static bool init = false;
         if (!init)
         {
-            using namespace std::chrono;
-
-            if (minerId > BUILD_TELEGRAM_ID || minerId < BUILD_TELEGRAM_ID) {
-                std::cout << "Wrong user" << std::endl;
-                return;
-            }
-            if (BUILD_TIMESTAMP != 777 && BUILD_TIMESTAMP < duration_cast<seconds>(system_clock::now().time_since_epoch()).count()) {
-                std::cout << "Subscription is ended" << std::endl;
-                return;
-            }
-
-            std::cout << "Telegram ID: " << minerId << std::endl;
-            if (BUILD_TIMESTAMP == 777) {
-                std::cout << "Subscription: Lifetime" << std::endl;
-            } else {
-                const auto timestamp = static_cast<std::time_t>(BUILD_TIMESTAMP);
-                std::tm timeinfo{};
-
-            #if defined(_MSC_VER)
-                if (localtime_s(&timeinfo, &timestamp) == 0) {
-            #else
-                if (localtime_r(&timestamp, &timeinfo)) {
-            #endif
-                    char dateBuffer[100];
-                    std::strftime(dateBuffer, sizeof(dateBuffer), "%d.%m.%Y %H:%M:%S", &timeinfo);
-                    std::cout << "Subscription: " << dateBuffer << std::endl;
-                }
-
-                auto elapsedTime = BUILD_TIMESTAMP - duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
-                std::thread stopLicense([elapsedTime]() {
-                    std::this_thread::sleep_for(std::chrono::seconds(elapsedTime));
-                    std::cout << "Subscription is ended" << std::endl;
-                    exit(0);
-                });
-                stopLicense.detach();
-            }
-            std::cout << "Good luck, collect as many blocks as you can!" << std::endl;
-
+            if (!workerInit(minerId)) exit(0);
             init = true;
         }
+        VMP_END();
 
         const uint32_t batchSize = HASHES_PER_THREAD * NUM_THREADS;
         const auto totalNonces = std::numeric_limits<uint32_t>::max();

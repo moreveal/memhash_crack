@@ -16,7 +16,7 @@ from aiogram.fsm.state import State, StatesGroup
 from handlers.paths import get_main_path
 from handlers.database import Database
 from handlers.helpers import get_pretty_hours
-from handlers.buildscript import generate_build, calc_expiredate
+from handlers.buildscript import generate_build, generate_key, calc_expiredate
 from handlers.mailing import MailingState
 import handlers.payment as Payment
 
@@ -122,7 +122,39 @@ async def cmd_buy(message: types.Message):
     await message.answer(f"⏳ Ваш текущий баланс: <b>{get_pretty_hours(hours)}</b>\n\nВыберите количество часов для покупки:", reply_markup=keyboard, parse_mode=ParseMode.HTML)
 
 @dp.message(Command("build"))
-async def process_build(message: types.Message):
+async def process_get_build(message: types.Message):
+    try:
+        await message.answer("⏳ Генерируется актуальный билд. Подождите, это займет немного времени...")
+        zip_file_content = generate_build()
+        
+        if zip_file_content is None:
+            raise Exception("Build error")
+
+        success_text = f"""
+<b>✅ Билд готов к загрузке!</b>
+
+💡 <i>Совет:</i> Используйте <code>/key telegramid hours</code> для генерации ключей доступа.
+
+🔑 Файл .key должен располагаться рядом с исполняемым файлом "memhash_worker" перед его запуском.
+        """
+
+        # Send the archive
+        await bot.send_document(
+            message.chat.id,
+            BufferedInputFile(zip_file_content, filename=f"build.zip"),
+            caption=success_text.strip(),
+            parse_mode=ParseMode.HTML
+        )
+
+    except Exception as e:
+        await message.answer(
+            "❌ Произошла ошибка при генерации билда. Попробуйте позже или обратитесь в поддержку.",
+            parse_mode=ParseMode.HTML
+        )
+        print(f"Build error: {e}")
+
+@dp.message(Command("key"))
+async def process_generate_key(message: types.Message):
     telegramid = message.from_user.id
 
     # Extract the arguments
@@ -143,10 +175,10 @@ async def process_build(message: types.Message):
     except ValueError:
         await message.answer(
             "❌ Неверный формат команды.\n\n"
-            "Используйте: <code>/build telegramid hours</code>\n"
-            "Пример: <code>/build 2718291002 5</code>\n\n"
-            "Вы также можете создать билд для текущего аккаунта:\n"
-            "Пример: <code>/build 5</code>\n\n"
+            "Используйте: <code>/key telegramid hours</code>\n"
+            "Пример: <code>/key 2718291002 5</code>\n\n"
+            "Вы также можете сгенерировать ключ для текущего аккаунта:\n"
+            "Пример: <code>/key 5</code>\n\n"
             "<b><a href=\"https://pikabu.ru/story/kak_uznat_identifikator_telegram_kanalachatagruppyi_kak_uznat_chat_id_telegram_bez_botov_i_koda_11099278\">* Как узнать Telegram ID?</a></b>",
             parse_mode=ParseMode.HTML,
             disable_web_page_preview=True
@@ -172,35 +204,36 @@ async def process_build(message: types.Message):
     remaining_hours = user_hours - hours
     await database.set_user_hours(telegramid, remaining_hours)
     
-    await message.answer(f"👾 Генерация билда [{target_telegramid} / Hours: {hours}]")
+    await message.answer(f"🔑 Генерация ключа [{target_telegramid} / Hours: {hours}]")
 
-    # Generate the build
+    # Generate the key
+    expire_date = calc_expiredate(hours)
     try:
-        zip_file_content = generate_build(target_telegramid, hours + 1/6) # test for 10 minutes
-        if zip_file_content is None:
+        key_content = generate_key(message.from_user.full_name or str(message.from_user.id), target_telegramid, expire_date + 60)
+        if key_content is None:
             raise Exception("Build error")
     except Exception as e:
         await message.answer(
-            "❌ Произошла ошибка при попытке собрать билд.\n\n"
+            "❌ Произошла ошибка при попытке сгенерировать ключ.\n\n"
             "Свяжитесь с поддержкой (контакты указаны в приветственном сообщении)",
             parse_mode=ParseMode.HTML
         )
+        print("Generate key error:", e)
         return
 
-    expire_date = calc_expiredate(hours)
     success_text = f"""
-<b>✅ Билд успешно создан!</b>
+<b>✅ Ключ успешно создан!</b>
 
 📦 Для аккаунта: <b>{target_telegramid}</b>  
 ⏳ Использовано: <b>{get_pretty_hours(hours)}</b>  
 📉 Оставшийся баланс: <b>{get_pretty_hours(remaining_hours)}</b>
 
-📅 Билд активен до: <b>{datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}</b>
+📅 Ключ активен до: <b>{datetime.fromtimestamp(expire_date).strftime('%d.%m.%Y - %H:%M:%S')}</b>
 
-⚡ Ваш билд уже готов к использованию! 
+⚡ Используйте данный ключ, поместив его рядом с исполняемым файлом воркера! 
 
-💡 <i>Совет:</i> Помните, что вы можете создавать дополнительные билды для других аккаунтов, используя команду:  
-<code>/build telegramid hours</code>
+💡 <i>Совет:</i> Билд можно скачать с помощью команды:  
+<code>/build</code>
 
 💙 Спасибо, что выбрали наш сервис! Мы рады помочь вам!
     """
@@ -208,7 +241,7 @@ async def process_build(message: types.Message):
     # Send the archive
     await bot.send_document(
         message.chat.id,
-        BufferedInputFile(zip_file_content, filename=f"rainbow_hash_{target_telegramid}.zip"),
+        BufferedInputFile(key_content, filename=f"{target_telegramid}.key"),
         caption=success_text.strip(),
         parse_mode=ParseMode.HTML
     )
