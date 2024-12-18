@@ -58,9 +58,12 @@ class Database:
 
             await db.commit()
 
-    async def create_new_user(self, telegramid: int):
+    async def create_new_user(self, telegramid: int, tag: str):
         async with aiosqlite.connect(self.path) as db:
-            await db.execute('INSERT OR IGNORE INTO users (telegram_id) VALUES (?)', (telegramid,))
+            if not tag or len(tag) == 0:
+                tag = "-"
+
+            await db.execute('INSERT OR IGNORE INTO users (telegram_id, tag) VALUES (?, ?)', (telegramid, tag))
             await db.commit()
 
     async def is_user_exists(self, telegramid: int):

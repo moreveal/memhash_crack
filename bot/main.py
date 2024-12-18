@@ -57,7 +57,7 @@ async def cmd_start(message: types.Message):
     if referrer:
         await database.create_referral(referrer, user_id)
     
-    await database.create_new_user(message.from_user.id)
+    await database.create_new_user(message.from_user.id, message.from_user.full_name)
     await message.answer(content, parse_mode=ParseMode.HTML)
 
 @dp.message(Command("paysupport"))
