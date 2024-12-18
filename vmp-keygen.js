@@ -2,8 +2,6 @@ const { createKeyGen } = require("vmprotect-keygen");
 const { Command } = require("commander");
 const program = new Command();
 
-// TODO: Еще какие-то данные нужно занести или чет такое, пишет INVALID_KEY, надо отладку сделать нормальную
-
 program
   .requiredOption("-u, --userName <userName>", "")  // Required argument for userName
   .option("-e, --email <email>", "User email", "")
