@@ -85,7 +85,7 @@ private:
 
         // Check minerid
         {
-            uint64_t build_telegram_id;
+            uint64_t build_telegram_id = 0x0;
 
             for (size_t i = 0; i < 8; i++) {
                 build_telegram_id = (build_telegram_id << 8) | licenseData.bUserData[i];
@@ -99,7 +99,7 @@ private:
         }
 
         // Check expires
-        uint64_t build_timestamp = 0;
+        uint64_t build_timestamp = 0x0;
         {
             for (size_t i = 8; i < 16; i++)
             {
