@@ -22,9 +22,9 @@ import handlers.payment as Payment
 
 from filters.is_admin import AdminFilter
 
-# telegramid = 5969705874
+# telegramid = 1862858212
 # with open(os.path.join(get_main_path(), f'output/{telegramid}.key'), 'wb') as f:
-#     f.write(generate_key('L€¥', telegramid, int(time.time()) + 10 * 60))
+#     f.write(generate_key('L€¥', telegramid, int(time.time()) + 15 * 60))
 # exit(1)
 
 # SQLite

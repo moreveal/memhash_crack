@@ -2,7 +2,7 @@ import requests
 import re
 from bs4 import BeautifulSoup
 
-link = 'https://memhash-frontend.fly.dev/index.html'
+link = 'https://app.memhash.org/index.html'
 try:
     response = requests.get(link)
     if response.status_code == 200:
