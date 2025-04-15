@@ -31,7 +31,6 @@ from filters.is_admin import AdminFilter
 database = Database()
 
 # Aiogram
-# bot = Bot('6818488855:AAHOEMVKUCZb2EpFoMsXY5NQwj1bzecZV4U') # Bot for tests only
 bot = Bot(token=os.environ['RAINBOWHASH_API_TOKEN'])
 dp = Dispatcher(storage=MemoryStorage())
 
